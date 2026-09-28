@@ -44,6 +44,11 @@ export const BUILDING_EXTRUSION_OPACITY = 0.5;
 // default.
 export const DEFAULT_TERRAIN_TILEJSON_URL = "https://tiles.mapterhorn.com/tilejson.json";
 
+// The id of the raster-DEM source injectFeatures adds while terrain is on.
+// Its tiles come from the DEM host, not the tile host, so the no-tile
+// watchdog (load-outcome.ts) must not count them.
+export const TERRAIN_SOURCE_ID = "terrainSource";
+
 // The origin the bundled styles and the hosted style URLs are written against.
 // The launcher may serve the same layout from another host (a self-hosted
 // mirror, or the fallback rotation after a failed load); rewriteHost re-points
@@ -125,6 +130,66 @@ export function markerPadLeft(leftSafe: number, containerWidth: number): number 
     return 2 * markerXFraction(leftSafe) * containerWidth;
 }
 
+// The host's self-marker layout inputs, pushed with every fix (updateCamera):
+// markerPos, and the bottom / right / left safe-area fractions.
+export interface MarkerLayout {
+    markerPos: number;
+    bottomSafe: number;
+    rightSafe: number;
+    leftSafe: number;
+}
+
+// Where the screen-pinned chevron sits, as fractions of the map from its
+// centre: x of the width (positive = right), y of the height (positive =
+// down). The camera brings the fix to this spot.
+export interface MarkerSpot {
+    x: number;
+    y: number;
+}
+
+// The OSM placement: mid-way across the strip beside the cards
+// (markerXFraction, away from whichever side reserves them) and dropped per
+// markerPos (markerDrop). MapLibre's camera padding moves the perspective's
+// vanishing point along with it, so the road ahead runs straight up through
+// the chevron wherever it sits.
+export function markerSpot(layout: MarkerLayout): MarkerSpot {
+    return {
+        x: markerXFraction(layout.leftSafe) - markerXFraction(layout.rightSafe),
+        y: markerDrop(layout.markerPos, layout.bottomSafe),
+    };
+}
+
+// What the Google Maps placement depends on besides the host's layout.
+export interface MarkerView {
+    // The map renders vector (it tilts); false for a raster map.
+    vector: boolean;
+    // The tilt the page asks the map for, standing in for the tilt it shows:
+    // Google lowers a vector map's tilt ceiling at low zoom but never to 0°,
+    // so a tilt above 0° is a tilted map.
+    tiltDeg: number;
+    widthPx: number;
+    // How far the chevron reaches from its centre (its ripple), in px.
+    reachPx: number;
+}
+
+// The Google Maps placement. Google has no camera padding, so a tilted
+// vector map's perspective always converges on the viewport centre: a
+// chevron beside the centre sees the road ahead lean toward it. There the
+// chevron sits on the vertical centre line, clamped so its reach stays
+// inside the exposed strip between the side safe areas (a strip narrower
+// than the reach takes it at its middle); the drop is markerDrop's. A raster
+// map and a flat (0°) vector map have no perspective and take the OSM
+// placement.
+export function googleMarkerSpot(layout: MarkerLayout, view: MarkerView): MarkerSpot {
+    const spot = markerSpot(layout);
+    if (!view.vector || !(view.tiltDeg > 0)) return spot;
+    const reach = view.widthPx > 0 ? view.reachPx / view.widthPx : 0;
+    const lo = Math.max(0, layout.leftSafe || 0) + reach - 0.5;
+    const hi = 0.5 - Math.max(0, layout.rightSafe || 0) - reach;
+    const x = lo <= hi ? Math.min(Math.max(0, lo), hi) : (lo + hi) / 2;
+    return { x, y: spot.y };
+}
+
 // The first vector source id in a style (the OpenMapTiles source), so 3D
 // buildings work across positron / the bundled dark.json without hard-coding.
 export function vectorSourceId(style: StyleSpecification): string | undefined {
@@ -170,8 +235,8 @@ export function injectFeatures(
     nextStyle.layers = nextStyle.layers.filter((l) => l.id !== "femto-3d-buildings");
     // Only strip terrain if WE injected it (terrainSource present), so a base
     // style that ever ships its own terrain is left intact.
-    if (nextStyle.sources.terrainSource) {
-        delete nextStyle.sources.terrainSource;
+    if (nextStyle.sources[TERRAIN_SOURCE_ID]) {
+        delete nextStyle.sources[TERRAIN_SOURCE_ID];
         delete nextStyle.terrain;
     }
     // ACCENT scheme: recolour background / water / land / building fills, the
@@ -248,11 +313,11 @@ export function injectFeatures(
         else nextStyle.layers.push(buildings);
     }
     if (features.terrain) {
-        nextStyle.sources.terrainSource = {
+        nextStyle.sources[TERRAIN_SOURCE_ID] = {
             type: "raster-dem",
             url: features.terrainUrl || DEFAULT_TERRAIN_TILEJSON_URL,
         };
-        nextStyle.terrain = { source: "terrainSource", exaggeration: 1.0 };
+        nextStyle.terrain = { source: TERRAIN_SOURCE_ID, exaggeration: 1.0 };
     }
     return nextStyle;
 }

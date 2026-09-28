@@ -83,9 +83,14 @@ vehicle.
   provider's own styles.
 - **Self-healing.** A map that fails to load — an unstable link, a
   provider outage, a missing key — shows a clear notice in the visible
-  map area and recovers automatically: reloads retry with a capped
-  backoff while the network reports connectivity, and a reconnect after
-  an offline period reloads the map without user action.
+  map area and recovers automatically while the launcher is on screen:
+  reloads retry with a capped backoff for as long as the map data stays
+  out of reach, even while the device still reports a connection, and a
+  reconnect after an offline period reloads the map at once. A request
+  the provider answers with a refusal, such as a style address its
+  server reports as missing or a rejected key, stops the retries after a
+  few attempts; a failure with no readable answer, such as a server name
+  that does not resolve, keeps retrying like an outage.
 
 ## Driving data and trips
 
@@ -207,10 +212,10 @@ both built from this repository by continuous integration:
 - **Nightly** — the newest test build, which changes often and may
   break, published as a rolling
   [`nightly`](https://github.com/seijikohara/femto-car-launcher/releases/tag/nightly)
-  prerelease that replaces itself on every push. Download
-  `femto-car-launcher-nightly.apk`. Its launcher icon carries an "N"
-  badge and its app name reads "Femto Nightly", so it never gets
-  mixed up with stable.
+  prerelease that replaces itself on every push that changes the APK.
+  Download `femto-car-launcher-nightly.apk`. Its launcher icon carries
+  an "N" badge and its app name reads "Femto Nightly", so it never
+  gets mixed up with stable.
 
 The two channels use different application ids and install side by
 side, so trying a nightly build never means uninstalling stable, and

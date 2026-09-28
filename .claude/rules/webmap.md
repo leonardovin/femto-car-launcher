@@ -10,10 +10,10 @@ one entry point (`index.html`), whose `?backend=` query parameter
 (`osm` / `googlemaps`, resolved in `src/backend-name.ts`)
 selects the dynamically imported backend module under
 `src/backends/` — Vite code-splits each backend into its own chunk,
-so a page only fetches the library it renders with. The shared
-camera-follow engine (`src/follow-camera.ts`), chevron helpers
-(`src/chevron.ts`), and bridge plumbing (`src/bridge.ts`) are one
-implementation across backends.
+so a page only fetches the library it renders with. The camera-follow
+policy (see Camera follow), chevron helpers (`src/chevron.ts`), and
+bridge plumbing (`src/bridge.ts`) are one implementation across
+backends.
 Dependency versions live in `webmap/package.json` +
 `pnpm-lock.yaml` + `pnpm-workspace.yaml` (the Vite+ catalog; together
 the SSOT) — never restate version numbers here.
@@ -50,11 +50,31 @@ rewriting. The Kotlin side owns the host list and its fallback order
 the getters are absent and the upstream defaults apply.
 
 An unreachable tile host does not fail the style load — the bundled
-styles come from `appassets` and only their sources fail — so the
-page escalates a run of source errors with nothing loading to a
-`fatal`, which is what makes the host rotate. That escalation is
-gated on `tileHostFallback()`: with a single host the old rule
-stands and post-load errors stay log-only, never UI.
+styles come from `appassets` and only their sources fail, and
+MapLibre never re-fetches a failed TileJSON — so the page escalates
+an error naming the tile host to a `fatal` when no tile has arrived
+within the grace period (`src/load-outcome.ts`), whatever the number
+of hosts. A page opened without data is the common case, not only a
+dead mirror. The `fatal` is what makes the host reload the page, on
+the next host when there is one; `liveReloadRetryDelayMsOrNull` in
+`WebMapView.kt` owns the retry policy. Errors after a tile of the
+current style has arrived stay log-only, never UI; a style swap
+starts the judgement afresh, because it can re-create the vector
+source and fetch its TileJSON again.
+
+The fatal's kind tells the host whether a reload can help. The page
+classifies every load failure in `src/load-outcome.ts`:
+`isNetworkStatus` decides from MapLibre's `AJAXError` status whether
+a request never reached its data or was refused, and
+`initFailureDetail` keeps `backend-load-failed` for a map script
+that could not be fetched. Status 0 covers every failure the WebView
+cannot read, DNS failures and CORS-blocked answers included, so a
+mistyped host name retries like an outage. The host mirrors the
+kinds in `NetworkFailureKinds` and `RefusedFailureKinds`
+(`WebMapView.kt`), and `FailureKindContractTest` guards the pair.
+Only the network kinds retry without limit; a refused request, or an
+exception once the map library has loaded, is a configuration
+failure the host retries within its budget.
 
 Two caveats follow from the rewrite. The origin the styles are
 written against is a cross-language fact — `UPSTREAM_TILE_HOST`,
@@ -103,6 +123,37 @@ WebView on `effectiveGoogleDark` and a flip rebuilds the Google page.
 A Map ID's cloud style overrides the scheme only if a dark-mode style
 is associated with it in the Cloud console (a 2025 addition); the
 Map ID hint in Settings says so.
+
+## Camera follow
+
+The two backends run different engines — MapLibre's `easeTo` behind
+`src/follow-camera.ts`, and for Google, whose `moveCamera` is
+immediate, a per-frame glide (`src/camera-glide.ts`) — under one
+policy:
+
+- `src/camera.ts` is the one home of the follow policy — the motion
+  choice (`followMotion`), the one-shot motions and their curve
+  (`defaultEase`, MapLibre's default `easeTo` curve, ported), the map
+  and chevron orientation (`followOrientation`), and the bearing
+  smoothing — and `src/style.ts` of the chevron placement. A backend
+  never keeps its own motion duration, curve, or heading rule.
+- In heading-up, both maps turn to the smoothed bearing of every
+  fix. Never hold the heading back in one backend: the Google-only
+  heading dead band (#409, settled by #414) left the road and the
+  arrow off vertical and was removed. A change to how the map heading
+  follows the bearing (a speed gate, say) goes into `src/camera.ts`
+  for both.
+- The Google glide moves what `easeTo` moves — the location under
+  the chevron and the chevron's screen offset, never the camera
+  centre — and derives the centre every frame, so a rotation or zoom
+  pivots on the chevron as on the OSM map.
+- The Maps JS API has no camera padding, so a tilted Google vector
+  map's perspective converges on the viewport centre: the chevron
+  sits on the vertical centre line there, clamped clear of the side
+  cards (`googleMarkerSpot`). A chevron that changes spot glides in
+  lockstep with the camera (`spotMotion`) with the reflow motion both
+  backends use; as with any reflow, a fix that arrives during that
+  glide finishes the remaining chevron move at once.
 
 ## Toolchain split
 
