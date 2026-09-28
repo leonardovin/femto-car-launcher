@@ -12,6 +12,7 @@ import io.github.seijikohara.femto.data.calendar.CalendarCatalogState
 import io.github.seijikohara.femto.data.calendar.CalendarPreferences
 import io.github.seijikohara.femto.data.calendar.CalendarPreferencesStore
 import io.github.seijikohara.femto.data.common.WhileUiSubscribed
+import io.github.seijikohara.femto.data.common.catchAsDefault
 import io.github.seijikohara.femto.data.display.DisplayPreferences
 import io.github.seijikohara.femto.data.display.DisplaySettingsStore
 import io.github.seijikohara.femto.data.display.MapBackend
@@ -23,15 +24,24 @@ import io.github.seijikohara.femto.data.fonts.FontSelectionStore
 import io.github.seijikohara.femto.data.location.LocationGraph
 import io.github.seijikohara.femto.data.location.LocationPreferences
 import io.github.seijikohara.femto.data.location.LocationSettingsStore
+import io.github.seijikohara.femto.data.location.VehicleMotion
+import io.github.seijikohara.femto.data.location.currentOrUnknown
+import io.github.seijikohara.femto.data.update.UpdatePreferences
+import io.github.seijikohara.femto.data.update.UpdateRepository
+import io.github.seijikohara.femto.data.update.UpdateSettingsStore
+import io.github.seijikohara.femto.data.update.UpdateState
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
+private const val TAG = "SettingsViewModel"
 
 /**
  * Narrow port for the track-log actions Settings drives. The factory binds it
@@ -46,6 +56,26 @@ internal interface TrackLogPort {
     suspend fun clearHistory(): Boolean
 }
 
+/**
+ * Narrow port for the updater Settings drives: [UpdateRepository]'s state and
+ * actions. The factory binds it to the app's updater; tests substitute an
+ * in-memory fake, so every [UpdateState] can be staged directly.
+ */
+internal interface UpdaterPort {
+    val state: Flow<UpdateState>
+
+    /** The version this process was updated to, until [acknowledgeUpdatedTo]; null otherwise. */
+    val updatedTo: Flow<String?>
+
+    fun checkNow()
+
+    fun download()
+
+    fun install()
+
+    fun acknowledgeUpdatedTo()
+}
+
 internal class SettingsViewModel(
     private val displayPreferences: DisplaySettingsStore,
     private val fontPreferences: FontSelectionStore,
@@ -54,10 +84,21 @@ internal class SettingsViewModel(
     private val dockPreferences: DockSettingsStore,
     private val trackLog: TrackLogPort,
     availableCalendars: Flow<CalendarCatalogState>,
+    private val updater: UpdaterPort,
+    private val updatePreferences: UpdateSettingsStore,
+    // What the latest fix says about the vehicle, emitted on change
+    // (vehicleMotionFlow); gates the install steps.
+    private val motion: Flow<VehicleMotion>,
 ) : ViewModel() {
     // VM-local export progress folded into the derived UiState below; every
-    // other UiState field mirrors a persisted store.
+    // other UiState field mirrors a persisted store, the updater's state aside.
     private val trackExportState = MutableStateFlow<TrackExportState>(TrackExportState.Idle)
+
+    // VM-local like the export progress: whether the last install tap came back
+    // from the "Install unknown apps" access without it turned on. It stays set
+    // until an install goes ahead, so the install row can say why nothing
+    // happened.
+    private val installGrantDeclined = MutableStateFlow(false)
 
     private val storeState: Flow<SettingsUiState> =
         combine(
@@ -139,11 +180,35 @@ internal class SettingsViewModel(
             order.any { it !in hidden }
         }
 
+    // Only a fix that shows the vehicle moving holds the install steps: a phone
+    // without the location grant never has a fix, and must still be able to
+    // install an update it asked for. Seeded and caught like the dashboard's
+    // slots: the updater resolves off the main thread when first collected, and
+    // neither that wait nor a failure there may hold back or crash the rest of
+    // Settings.
+    private val updates: Flow<UpdatesUiState> =
+        combine(
+            updater.state,
+            updater.updatedTo,
+            updatePreferences.settings,
+            motion,
+            installGrantDeclined,
+        ) { state, updatedTo, settings, currentMotion, grantDeclined ->
+            updatesUiState(
+                state = state,
+                settings = settings,
+                updatedTo = updatedTo,
+                installBlocked = currentMotion == VehicleMotion.MOVING,
+                installGrantDeclined = grantDeclined,
+            )
+        }.onStart { emit(UpdatesUiState.Initial) }
+            .catchAsDefault(TAG, "updates", UpdatesUiState.Initial)
+
     // Folded in here rather than into the store combine above, which already holds
     // kotlinx's five-flow typed overload.
     val uiState: StateFlow<SettingsUiState> =
-        combine(storeState, trackExportState, dockStatusVisible) { state, export, statusVisible ->
-            state.copy(trackExport = export, dockStatusVisible = statusVisible)
+        combine(storeState, trackExportState, dockStatusVisible, updates) { state, export, statusVisible, update ->
+            state.copy(trackExport = export, dockStatusVisible = statusVisible, updates = update)
         }.stateIn(viewModelScope, WhileUiSubscribed, SettingsUiState.Initial)
 
     fun onAction(action: SettingsAction) {
@@ -407,11 +472,46 @@ internal class SettingsViewModel(
                     calendarPreferences.setCalendarHidden(action.id, action.hidden)
                 }
 
+                SettingsAction.CheckForUpdates -> {
+                    updater.checkNow()
+                }
+
+                SettingsAction.DownloadUpdate -> {
+                    updater.download()
+                }
+
+                SettingsAction.InstallUpdate -> {
+                    // SettingsRoute sends this only once the access is on, so a
+                    // decline no longer describes the install row.
+                    installGrantDeclined.value = false
+                    // A local gate (AGENTS.md#driving-lockout): the system's install
+                    // confirmation must not pop up over navigation while driving. The
+                    // row already waits while moving; this read covers a tap that
+                    // raced the car pulling away, and the install that resumes after
+                    // the "Install unknown apps" grant screen. The updater gates the
+                    // confirmation again when it arrives, reading the same source
+                    // through the same function.
+                    if (motion.currentOrUnknown() != VehicleMotion.MOVING) updater.install()
+                }
+
+                SettingsAction.InstallGrantDeclined -> {
+                    installGrantDeclined.value = true
+                }
+
+                is SettingsAction.SetUpdateAutoCheck -> {
+                    updatePreferences.setAutoCheck(action.value)
+                }
+
+                SettingsAction.AcknowledgeUpdatedTo -> {
+                    updater.acknowledgeUpdatedTo()
+                }
+
                 is SettingsAction.ResetToDefaults -> {
                     displayPreferences.resetToDefaults()
                     locationPreferences.resetToDefaults()
                     fontPreferences.resetToDefaults()
                     calendarPreferences.resetToDefaults()
+                    updatePreferences.resetToDefaults()
                 }
 
                 is SettingsAction.ResetSection -> {
@@ -424,6 +524,8 @@ internal class SettingsViewModel(
                         SettingsSectionId.LOCATION -> locationPreferences.resetToDefaults()
 
                         SettingsSectionId.PANELS -> calendarPreferences.resetToDefaults()
+
+                        SettingsSectionId.UPDATES -> updatePreferences.resetToDefaults()
 
                         SettingsSectionId.SCREEN,
                         SettingsSectionId.UNITS,
@@ -447,6 +549,8 @@ internal class SettingsViewModelFactory(
         modelClass: Class<T>,
         extras: CreationExtras,
     ): T {
+        val locationGraph = LocationGraph.get(application)
+
         @Suppress("UNCHECKED_CAST")
         return SettingsViewModel(
             displayPreferences = DisplayPreferences(application),
@@ -456,8 +560,33 @@ internal class SettingsViewModelFactory(
             dockPreferences = DockPreferences(application),
             trackLog = trackLogPort(application),
             availableCalendars = CalendarCatalog(application).availableCalendarsFlow(),
+            updater = updaterPort(application),
+            updatePreferences = UpdatePreferences(application),
+            // The dashboard's own location pipeline: one GPS registration shared
+            // with the sheet's host, not a second one for this screen.
+            motion = locationGraph.vehicleMotion(),
         ) as T
     }
+
+    // Collected through UpdateRepository.observe, so even a sheet restored before
+    // the dashboard's first subscription resolves the updater off the main
+    // thread. The actions run on taps, long after it exists.
+    private fun updaterPort(application: Application): UpdaterPort =
+        object : UpdaterPort {
+            private val repository get() = UpdateRepository.get(application)
+
+            override val state: Flow<UpdateState> = UpdateRepository.observe(application) { it.state }
+
+            override val updatedTo: Flow<String?> = UpdateRepository.observe(application) { it.updatedTo }
+
+            override fun checkNow() = repository.checkNow()
+
+            override fun download() = repository.download()
+
+            override fun install() = repository.install()
+
+            override fun acknowledgeUpdatedTo() = repository.acknowledgeUpdatedTo()
+        }
 
     // The one place UI meets the recorder: SAF document opening stays here so
     // the data layer never sees a Uri or ContentResolver.
@@ -487,8 +616,4 @@ internal class SettingsViewModelFactory(
 
             override suspend fun clearHistory(): Boolean = trackLog.clearHistory()
         }
-
-    private companion object {
-        const val TAG = "SettingsViewModel"
-    }
 }

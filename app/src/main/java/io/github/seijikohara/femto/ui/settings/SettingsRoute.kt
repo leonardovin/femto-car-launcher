@@ -18,7 +18,9 @@ import io.github.seijikohara.femto.data.fonts.FontSlot
  * Settings entry point: binds [SettingsViewModel], collects its state, and
  * forwards persisted changes to the VM. Host-level navigation / system intents (back, the
  * notification-access screen, the OS settings root) flow up to [MainActivity] via
- * the callbacks so this route owns no Activity concerns.
+ * the callbacks so this route owns no Activity concerns beyond the two round
+ * trips whose results feed an action back into the VM: the RECORD_AUDIO prompt
+ * and the "Install unknown apps" grant ([rememberInstallUpdate]).
  */
 @Composable
 internal fun SettingsRoute(
@@ -50,10 +52,22 @@ internal fun SettingsRoute(
         rememberLauncherForActivityResult(
             contract = ActivityResultContracts.RequestPermission(),
         ) { viewModel.onAction(SettingsAction.SetMusicSpectrum(true)) }
+    // Where the grant cannot be given here, the release page is the manual
+    // path that is left.
+    val installUpdate =
+        rememberInstallUpdate(
+            onInstall = { viewModel.onAction(SettingsAction.InstallUpdate) },
+            onGrantDecline = { viewModel.onAction(SettingsAction.InstallGrantDeclined) },
+            onUnavailable = { onOpenDocument(SettingsDocument.RELEASE_PAGE) },
+        )
     val onAction: (SettingsAction) -> Unit = { action ->
         when {
             action is SettingsAction.SetMusicSpectrum && action.value && !context.hasRecordAudioPermission() -> {
                 recordAudioLauncher.launch(Manifest.permission.RECORD_AUDIO)
+            }
+
+            action == SettingsAction.InstallUpdate -> {
+                installUpdate()
             }
 
             else -> {
