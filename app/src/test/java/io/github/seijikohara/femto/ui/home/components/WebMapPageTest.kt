@@ -1,9 +1,13 @@
 package io.github.seijikohara.femto.ui.home.components
 
+import io.github.seijikohara.femto.R
 import io.github.seijikohara.femto.data.display.MapBackend
+import io.github.seijikohara.femto.testfixtures.BoundedFailureDetails
+import io.github.seijikohara.femto.testfixtures.NetworkFailureDetails
 import org.junit.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFalse
+import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
 class WebMapPageTest {
@@ -88,14 +92,177 @@ class WebMapPageTest {
         assertEquals("", tileHostForAttempt(emptyList(), 0))
     }
 
-    @Test fun `live reload retry backoff doubles then caps`() {
+    @Test fun `live reload retry backoff doubles then caps at a minute`() {
         assertEquals(5_000L, liveReloadRetryDelayMs(0))
         assertEquals(10_000L, liveReloadRetryDelayMs(1))
         assertEquals(20_000L, liveReloadRetryDelayMs(2))
-        assertEquals(160_000L, liveReloadRetryDelayMs(5))
-        // Past the budget-sized shift the delay stays at the cap (and stays a
-        // well-defined Long shift for any attempt value).
-        assertEquals(160_000L, liveReloadRetryDelayMs(9))
-        assertEquals(160_000L, liveReloadRetryDelayMs(MAX_LIVE_RELOAD_RETRIES))
+        assertEquals(40_000L, liveReloadRetryDelayMs(3))
+        assertEquals(60_000L, liveReloadRetryDelayMs(4))
+        // Past the cap the delay stays there, and the shift stays a
+        // well-defined Long shift for any attempt value.
+        assertEquals(60_000L, liveReloadRetryDelayMs(9))
+        assertEquals(60_000L, liveReloadRetryDelayMs(Int.MAX_VALUE))
+    }
+
+    @Test fun `a network failure keeps retrying at the capped delay after the bounded budget`() {
+        // What a page opened without data reports: the OSM page once no tile
+        // has arrived, a hosted style that never loaded, the Google Maps
+        // script that never arrived.
+        NetworkFailureDetails.forEach { detail ->
+            assertEquals(
+                60_000L,
+                liveReloadRetryDelayMsOrNull(detail, MAX_LIVE_RELOAD_RETRIES + 3, online = true),
+                detail,
+            )
+        }
+    }
+
+    @Test fun `a network failure retries without a validated network`() {
+        // Data can come back with no offline->online edge (a hotspot whose
+        // network stayed VALIDATED while its upstream was gone), so the retry
+        // must not wait for the validated signal.
+        NetworkFailureDetails.forEach { detail ->
+            assertEquals(5_000L, liveReloadRetryDelayMsOrNull(detail, 0, online = false), detail)
+            assertEquals(60_000L, liveReloadRetryDelayMsOrNull(detail, 20, online = false), detail)
+        }
+    }
+
+    @Test fun `credential, configuration and WebGL failures keep the bounded budget while online`() {
+        // A rejected BYO key must not hammer the provider, a refused URL does
+        // not heal by itself, and every Google reload after the map object
+        // exists is a billed map load.
+        BoundedFailureDetails.forEach { detail ->
+            assertEquals(liveReloadRetryDelayMs(0), liveReloadRetryDelayMsOrNull(detail, 0, online = true), detail)
+            val lastAttempt = MAX_LIVE_RELOAD_RETRIES - 1
+            assertEquals(
+                liveReloadRetryDelayMs(lastAttempt),
+                liveReloadRetryDelayMsOrNull(detail, lastAttempt, online = true),
+                detail,
+            )
+            assertNull(liveReloadRetryDelayMsOrNull(detail, MAX_LIVE_RELOAD_RETRIES, online = true), detail)
+            assertNull(liveReloadRetryDelayMsOrNull(detail, 0, online = false), detail)
+        }
+    }
+
+    @Test fun `a visible launcher retries a failed page on the backoff`() {
+        assertEquals(
+            LiveReloadStep.Retry(delayMs = 20_000L, onReturn = false),
+            reloadStep(retryDelayMs = 20_000L),
+        )
+    }
+
+    @Test fun `a hidden launcher holds every reload`() {
+        assertEquals(LiveReloadStep.Held, reloadStep(started = false, retryDelayMs = 20_000L))
+        assertEquals(LiveReloadStep.Held, reloadStep(started = false, reconnectPending = true))
+        assertEquals(
+            LiveReloadStep.Held,
+            reloadStep(started = false, reconnectPending = true, pageFromReturnReload = true),
+        )
+    }
+
+    @Test fun `the return reloads what came due while hidden at once`() {
+        assertEquals(
+            LiveReloadStep.Retry(delayMs = 0L, onReturn = true),
+            reloadStep(retryDelayMs = 60_000L, heldWhileHidden = true),
+        )
+    }
+
+    @Test fun `a reconnect reloads at once and wins over a retry`() {
+        assertEquals(
+            LiveReloadStep.Reconnect,
+            reloadStep(reconnectPending = true, retryDelayMs = 60_000L, heldWhileHidden = true),
+        )
+    }
+
+    @Test fun `a reconnect reaching the page the return reload built reloads nothing more`() {
+        // The dashboard's state catches up only after the return, so an edge
+        // from behind another app arrives after that reload.
+        assertEquals(
+            LiveReloadStep.CoveredReconnect,
+            reloadStep(reconnectPending = true, pageFromReturnReload = true),
+        )
+    }
+
+    @Test fun `nothing reloads when nothing is due`() {
+        listOf(true, false).forEach { started ->
+            assertEquals(
+                LiveReloadStep.None,
+                reloadStep(started = started, heldWhileHidden = true, pageFromReturnReload = true),
+            )
+        }
+    }
+
+    private fun reloadStep(
+        started: Boolean = true,
+        reconnectPending: Boolean = false,
+        retryDelayMs: Long? = null,
+        heldWhileHidden: Boolean = false,
+        pageFromReturnReload: Boolean = false,
+    ) = liveReloadStep(
+        started = started,
+        reconnectPending = reconnectPending,
+        retryDelayMs = retryDelayMs,
+        heldWhileHidden = heldWhileHidden,
+        pageFromReturnReload = pageFromReturnReload,
+    )
+
+    @Test fun `an OSM tile host or hosted style that refused the map gets its own notice`() {
+        // Not the provider-switch advice: the page is already on OpenStreetMap.
+        listOf(
+            "tile-host-rejected: AJAXError: Forbidden (403): https://tiles.example.test/planet",
+            "style-load-rejected: AJAXError: Not Found (404): https://tiles.openfreemap.org/styles/positron",
+        ).forEach { detail ->
+            assertEquals(
+                LiveMapNoticeText(R.string.map_live_data_refused, R.string.map_live_data_refused_hint),
+                osmNotice(fatalDetail = detail),
+                detail,
+            )
+        }
+    }
+
+    @Test fun `unreachable OSM data gets the notice that it reloads by itself`() {
+        assertEquals(
+            LiveMapNoticeText(R.string.map_live_data_unavailable, R.string.map_live_data_unavailable_hint),
+            osmNotice(fatalDetail = NetworkFailureDetails.first()),
+        )
+    }
+
+    @Test fun `a custom style keeps its own notice, refused or not`() {
+        listOf(
+            "style-load-rejected: AJAXError: Not Found (404): https://styles.example.test/basic/style.json",
+            "style-load-failed: AJAXError: Failed to fetch (0): https://styles.example.test/basic/style.json",
+        ).forEach { detail ->
+            assertEquals(
+                LiveMapNoticeText(R.string.map_custom_style_failed, R.string.map_custom_style_failed_hint),
+                osmNotice(fatalDetail = detail, customStyleActive = true),
+                detail,
+            )
+        }
+    }
+
+    @Test fun `other OSM failures keep the generic notice`() {
+        assertEquals(
+            LiveMapNoticeText(R.string.map_live_init_failed, R.string.map_live_init_failed_hint),
+            osmNotice(fatalDetail = "no-webgl-context"),
+        )
+    }
+
+    private fun osmNotice(
+        fatalDetail: String,
+        customStyleActive: Boolean = false,
+    ) = liveMapNoticeText(
+        rendererGaveUp = false,
+        googleMapsKeyMissing = false,
+        googleMapsBackend = false,
+        customStyleActive = customStyleActive,
+        fatalDetail = fatalDetail,
+    )
+
+    @Test fun `a failure is a network failure only by its leading kind`() {
+        NetworkFailureDetails.forEach { assertTrue(isNetworkFailure(it), it) }
+        BoundedFailureDetails.forEach { assertFalse(isNetworkFailure(it), it) }
+        // The text after the kind is free (an exception message, a URL).
+        assertFalse(isNetworkFailure("map-init-exception: style-load-failed: x"))
+        assertFalse(isNetworkFailure(""))
     }
 }

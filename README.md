@@ -83,9 +83,14 @@ vehicle.
   provider's own styles.
 - **Self-healing.** A map that fails to load — an unstable link, a
   provider outage, a missing key — shows a clear notice in the visible
-  map area and recovers automatically: reloads retry with a capped
-  backoff while the network reports connectivity, and a reconnect after
-  an offline period reloads the map without user action.
+  map area and recovers automatically while the launcher is on screen:
+  reloads retry with a capped backoff for as long as the map data stays
+  out of reach, even while the device still reports a connection, and a
+  reconnect after an offline period reloads the map at once. A request
+  the provider answers with a refusal, such as a style address its
+  server reports as missing or a rejected key, stops the retries after a
+  few attempts; a failure with no readable answer, such as a server name
+  that does not resolve, keeps retrying like an outage.
 
 ## Driving data and trips
 
