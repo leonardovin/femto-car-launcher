@@ -42,6 +42,7 @@ val buildWebMap =
         inputs.dir("../webmap/scripts")
         inputs.files(
             "../webmap/index.html",
+            "../webmap/legacy-polyfills.js",
             "../webmap/no-let.js",
             "../webmap/package.json",
             "../webmap/pnpm-lock.yaml",

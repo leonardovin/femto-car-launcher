@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import androidx.core.content.ContextCompat
 import io.github.seijikohara.femto.data.common.WhileUiSubscribed
+import io.github.seijikohara.femto.data.common.systemBroadcastReceiverFlags
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -55,7 +56,7 @@ internal class ClockRepository(
                     addAction(Intent.ACTION_TIME_CHANGED)
                     addAction(Intent.ACTION_TIMEZONE_CHANGED)
                 },
-                ContextCompat.RECEIVER_NOT_EXPORTED,
+                systemBroadcastReceiverFlags,
             )
             awaitClose { context.unregisterReceiver(receiver) }
         }.flowOn(Dispatchers.Main.immediate)

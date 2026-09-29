@@ -75,6 +75,68 @@
         ),
     );
 
+    // postMessage(message, { transfer }) (Chromium 71+): older engines accept
+    // only a transfer sequence and throw "Iterator getter is not callable" on
+    // the options dict. Probing is unreliable (MessagePort accepts the dict
+    // before Worker does), so the dict is always unwrapped to the equivalent
+    // transfer list, which every engine accepts with the same meaning.
+    // Error and DOMException became structured-cloneable in Chromium 77;
+    // MapLibre posts abort errors across the worker boundary. On a
+    // DataCloneError the message is retried with every error replaced by a
+    // plain { name, message, stack } object. Only plain objects and arrays are
+    // walked, so buffers (and the transfer list) keep their identity.
+    const isError = (value) =>
+        value instanceof Error ||
+        (typeof DOMException !== "undefined" && value instanceof DOMException);
+    const withPlainErrors = (value) => {
+        if (isError(value)) {
+            return { name: value.name, message: value.message, stack: value.stack };
+        }
+        if (Array.isArray(value)) return value.map(withPlainErrors);
+        if (value !== null && typeof value === "object") {
+            const proto = Object.getPrototypeOf(value);
+            if (proto !== Object.prototype && proto !== null) return value;
+            const copy = {};
+            for (const key of Object.keys(value)) copy[key] = withPlainErrors(value[key]);
+            return copy;
+        }
+        return value;
+    };
+    const unwrapTransfer = (target) => {
+        if (!target || typeof target.postMessage !== "function") return;
+        const original = target.postMessage;
+        target.postMessage = function postMessage(message, options) {
+            const transfer =
+                options !== null &&
+                typeof options === "object" &&
+                typeof options[Symbol.iterator] !== "function"
+                    ? options.transfer || []
+                    : options;
+            const send = (payload) =>
+                transfer === undefined
+                    ? original.call(this, payload)
+                    : original.call(this, payload, transfer);
+            try {
+                return send(message);
+            } catch (error) {
+                if (!error || error.name !== "DataCloneError") throw error;
+                return send(withPlainErrors(message));
+            }
+        };
+    };
+    unwrapTransfer(typeof Worker === "undefined" ? undefined : Worker.prototype);
+    unwrapTransfer(typeof MessagePort === "undefined" ? undefined : MessagePort.prototype);
+    // Inside the MapLibre worker, postMessage lives on the global object itself
+    // ([Global] interfaces hold their operations on the instance), not on
+    // DedicatedWorkerGlobalScope.prototype. Never patch window.postMessage: its
+    // second argument is a target origin.
+    if (
+        typeof DedicatedWorkerGlobalScope !== "undefined" &&
+        root instanceof DedicatedWorkerGlobalScope
+    ) {
+        unwrapTransfer(root);
+    }
+
     define(root, "queueMicrotask", (callback) => {
         Promise.resolve()
             .then(callback)

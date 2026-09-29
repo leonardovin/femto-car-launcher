@@ -32,6 +32,7 @@ import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
 import io.github.seijikohara.femto.data.common.hasBluetoothConnectPermission
 import io.github.seijikohara.femto.data.common.hasReadPhoneStatePermission
+import io.github.seijikohara.femto.data.common.systemBroadcastReceiverFlags
 import io.github.seijikohara.femto.data.location.LocationRepository
 import io.github.seijikohara.femto.data.location.TripRepository
 import io.github.seijikohara.femto.data.location.hasFineLocationPermission
@@ -470,7 +471,7 @@ internal class SystemStatusRepository(
                 context,
                 receiver,
                 filter,
-                ContextCompat.RECEIVER_NOT_EXPORTED,
+                systemBroadcastReceiverFlags,
             )
             awaitClose { context.unregisterReceiver(receiver) }
         }
@@ -519,7 +520,7 @@ internal class SystemStatusRepository(
                 context,
                 receiver,
                 IntentFilter(Intent.ACTION_BATTERY_CHANGED),
-                ContextCompat.RECEIVER_NOT_EXPORTED,
+                systemBroadcastReceiverFlags,
             )
             emit(sticky)
             awaitClose { context.unregisterReceiver(receiver) }
