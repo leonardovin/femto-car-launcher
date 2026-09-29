@@ -48,9 +48,30 @@ internal fun interface GlyphCoverageChecker {
     ): Set<String>
 }
 
-/** Real [GlyphCoverageChecker]: one [Typeface] build per call, then [Paint.hasGlyph] per candidate. */
+/**
+ * Real [GlyphCoverageChecker]: one [Typeface] build per call, then [Paint.hasGlyph] per candidate.
+ * Below API 29 hasGlyph also answers from the system fallback chain (every face would "cover"
+ * CJK), so the font's own cmap ([OpenTypeCmap]) decides there, with the Paint probe as fallback.
+ */
 internal object TypefaceGlyphCoverageChecker : GlyphCoverageChecker {
     override fun coverage(
+        file: File,
+        characters: List<String>,
+    ): Set<String> = cmapCoverageOrNull(file, characters) ?: paintCoverage(file, characters)
+
+    private fun cmapCoverageOrNull(
+        file: File,
+        characters: List<String>,
+    ): Set<String>? =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            null
+        } else {
+            OpenTypeCmap
+                .coveredOrNull(file, characters.map { it.codePointAt(0) })
+                ?.let { covered -> characters.filterTo(mutableSetOf()) { it.codePointAt(0) in covered } }
+        }
+
+    private fun paintCoverage(
         file: File,
         characters: List<String>,
     ): Set<String> =

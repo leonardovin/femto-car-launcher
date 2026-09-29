@@ -59,8 +59,10 @@ runtime from whatever the head unit or phone already has.
   needs no theme-side change.
 - **Installed fonts** (`installedFontFamilies()`,
   `SystemFontCatalog.kt`): enumerates
-  `android.graphics.fonts.SystemFonts.getAvailableFonts()` (API 29+,
-  unconditional at minSdk 33), groups the files into families, and
+  `android.graphics.fonts.SystemFonts.getAvailableFonts()` (API 29+;
+  the Android 9 fork lists `/system/fonts` below that, and probes coverage
+  from each file's own cmap via `OpenTypeCmap`, because pre-29
+  `Paint.hasGlyph` answers through the system fallback chain), groups the files into families, and
   probes each family's Latin / CJK fitness.
   - **Naming**: Android exposes files, not a family catalog.
     `OpenTypeFontName` reads each file's OpenType 'name' table
