@@ -53,6 +53,7 @@ import androidx.compose.ui.window.PopupProperties
 import androidx.compose.ui.zIndex
 import com.composables.icons.lucide.Bluetooth
 import com.composables.icons.lucide.Check
+import com.composables.icons.lucide.Fan
 import com.composables.icons.lucide.Globe
 import com.composables.icons.lucide.LayoutGrid
 import com.composables.icons.lucide.Lucide
@@ -217,6 +218,7 @@ internal fun navSpecFor(id: DockNavId): NavSpec =
         DockNavId.BROWSER -> NavSpec(Lucide.Globe, R.string.nav_browser, HomeAction.OpenBrowser)
         DockNavId.ASSISTANT -> NavSpec(Lucide.Mic, R.string.nav_assistant, HomeAction.OpenAssistant)
         DockNavId.SETTINGS -> NavSpec(Lucide.Settings, R.string.nav_settings, HomeAction.OpenSettings)
+        DockNavId.CLIMATE -> NavSpec(Lucide.Fan, R.string.nav_climate, HomeAction.OpenClimate)
     }
 
 /**

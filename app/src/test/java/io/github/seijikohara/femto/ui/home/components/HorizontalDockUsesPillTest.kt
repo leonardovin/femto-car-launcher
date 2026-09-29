@@ -24,7 +24,9 @@ import kotlin.test.assertTrue
  * below would have to be re-picked with them.
  */
 class HorizontalDockUsesPillTest {
-    private val navCount = DockNavId.entries.size
+    // CLIMATE renders only on a head unit with a vehicle service, so the
+    // geometry is tuned for the dock without it.
+    private val navCount = DockNavId.entries.size - 1
     private val statusCount = DockStatusId.entries.size
 
     @Test
@@ -68,7 +70,9 @@ class HorizontalDockUsesPillTest {
  * hidden under a full-width bar breaks it.
  */
 class MapCreditClearsDockTest {
-    private val navCount = DockNavId.entries.size
+    // CLIMATE renders only on a head unit with a vehicle service, so the
+    // geometry is tuned for the dock without it.
+    private val navCount = DockNavId.entries.size - 1
     private val statusCount = DockStatusId.entries.size
 
     @Test

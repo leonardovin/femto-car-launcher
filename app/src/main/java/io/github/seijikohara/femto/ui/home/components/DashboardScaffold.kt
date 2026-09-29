@@ -57,6 +57,7 @@ import io.github.seijikohara.femto.ui.theme.FemtoDimens
 import io.github.seijikohara.femto.ui.theme.FemtoTheme
 import io.github.seijikohara.femto.ui.theme.Motion
 import io.github.seijikohara.femto.ui.theme.PreviewLightDark
+import io.github.seijikohara.femto.ui.vehicle.VehiclePanelHost
 import kotlinx.coroutines.flow.StateFlow
 import java.time.Clock
 
@@ -280,6 +281,7 @@ private fun DashboardContent(
     var calendarExpanded by rememberSaveable { mutableStateOf(false) }
     var weatherExpanded by rememberSaveable { mutableStateOf(false) }
     var tripExpanded by rememberSaveable { mutableStateOf(false) }
+    var climateExpanded by rememberSaveable { mutableStateOf(false) }
     // Auto-collapse when a panel's backing data disappears (session ended,
     // permission revoked mid-session, cold cache) so a dead panel never strands
     // over the map. The trip panel needs no gate: its ViewModel always has
@@ -306,6 +308,18 @@ private fun DashboardContent(
             calendarExpanded = false
             weatherExpanded = false
             tripExpanded = false
+            climateExpanded = false
+        }
+    }
+    // The climate panel opens from the dock too, so it collapses the others the
+    // same way.
+    LaunchedEffect(climateExpanded) {
+        if (climateExpanded) {
+            nowPlayingExpanded = false
+            calendarExpanded = false
+            weatherExpanded = false
+            tripExpanded = false
+            appsExpanded = false
         }
     }
     // A tap outside an open panel's body dismisses it, matching the modal
@@ -317,12 +331,17 @@ private fun DashboardContent(
             weatherExpanded -> ({ weatherExpanded = false })
             tripExpanded -> ({ tripExpanded = false })
             appsExpanded -> ({ appsExpanded = false })
+            climateExpanded -> ({ climateExpanded = false })
             else -> null
         }
     val overlayAction =
         remember(onAction) {
             { action: HomeAction ->
-                if (action is HomeAction.OpenAppDrawer) appsExpanded = true else onAction(action)
+                when (action) {
+                    HomeAction.OpenAppDrawer -> appsExpanded = true
+                    HomeAction.OpenClimate -> climateExpanded = true
+                    else -> onAction(action)
+                }
             }
         }
 
@@ -479,6 +498,8 @@ private fun DashboardContent(
         onCloseTrip = { tripExpanded = false },
         appsExpanded = appsExpanded,
         onCloseApps = { appsExpanded = false },
+        climateExpanded = climateExpanded,
+        onCloseClimate = { climateExpanded = false },
         dismissOpenPanel = dismissOpenPanel,
         modifier = Modifier.fillMaxSize().padding(dockEdgePadding(dockPosition, dockExtent)),
         spectrum = spectrum,
@@ -574,6 +595,8 @@ private fun DashboardOverlays(
     onCloseTrip: () -> Unit,
     appsExpanded: Boolean,
     onCloseApps: () -> Unit,
+    climateExpanded: Boolean,
+    onCloseClimate: () -> Unit,
     // Non-null while any panel is open: the inner outside-tap catcher's action.
     dismissOpenPanel: (() -> Unit)?,
     modifier: Modifier = Modifier,
@@ -918,18 +941,34 @@ private fun DashboardOverlays(
                 modifier = Modifier.fillMaxSize(),
             )
         }
+
+        // The vehicle panel (Android 9 fork), opened by the dock's CLIMATE button.
+        AnimatedVisibility(
+            visible = climateExpanded,
+            enter = Motion.panelEnter(motionTier),
+            exit = Motion.panelExit(motionTier),
+            modifier = Modifier.fillMaxSize().padding(outerPad),
+        ) {
+            VehiclePanelHost(
+                onClose = onCloseClimate,
+                onOpenClimateApp = { onAction(HomeAction.OpenClimateApp) },
+                hazeState = hazeState,
+                glassConfig = glassConfig,
+                modifier = Modifier.fillMaxSize(),
+            )
+        }
     }
 }
+
+// The navigation card starts past the map compass, which shares its top corner
+// (MapControls' compass diameter).
+private val NavigationCardCompassReserve = 48.dp
 
 // The horizontal inset for a dashboard overlay that sits on the card side of the
 // screen — [horizontal] rides the end edge for the default RIGHT driver and flips to
 // the start edge when [mirror] anchors the dashboard to a LEFT driver. [top] / [bottom]
 // carry the unchanged vertical insets. Overlays opposite the cards (the map controls)
 // invert the alignment themselves; this helper only builds the card-side reserve.
-// The navigation card starts past the map compass, which shares its top corner
-// (MapControls' compass diameter).
-private val NavigationCardCompassReserve = 48.dp
-
 private fun cardSideInset(
     mirror: Boolean,
     horizontal: Dp,

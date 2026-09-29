@@ -45,6 +45,7 @@ import io.github.seijikohara.femto.data.display.FullscreenSetting
 import io.github.seijikohara.femto.data.display.NavigationAppSetting
 import io.github.seijikohara.femto.data.display.OrientationSetting
 import io.github.seijikohara.femto.data.display.ThemeMode
+import io.github.seijikohara.femto.data.dock.DockNavId
 import io.github.seijikohara.femto.data.dock.DockPreferences
 import io.github.seijikohara.femto.data.fonts.FontRepository
 import io.github.seijikohara.femto.data.fonts.FontSlot
@@ -59,6 +60,7 @@ import io.github.seijikohara.femto.data.system.SystemPermissionSignals
 import io.github.seijikohara.femto.data.update.UpdateChannel
 import io.github.seijikohara.femto.data.update.dismissUpdateNotification
 import io.github.seijikohara.femto.data.update.releasePageUrl
+import io.github.seijikohara.femto.data.vehicle.VehicleRepository
 import io.github.seijikohara.femto.ui.assistant.AssistantOption
 import io.github.seijikohara.femto.ui.assistant.AssistantSheet
 import io.github.seijikohara.femto.ui.common.ModalSheetHost
@@ -180,7 +182,10 @@ class MainActivity : ComponentActivity() {
             val dockConfig by remember {
                 combine(
                     dockPreferences.navOrder,
-                    dockPreferences.navHidden,
+                    // The CLIMATE button only exists where the vehicle service does.
+                    combine(dockPreferences.navHidden, VehicleRepository.state) { hidden, vehicle ->
+                        if (vehicle.available) hidden else hidden + DockNavId.CLIMATE
+                    },
                     dockPreferences.statusOrder,
                     dockPreferences.statusHidden,
                 ) { navOrder, navHidden, statusOrder, statusHidden ->
@@ -701,6 +706,7 @@ class MainActivity : ComponentActivity() {
     // permissions, battery exemption). Idempotent, so every launch re-asserts it.
     private fun observeShizuku() {
         ShizukuGateway.start()
+        VehicleRepository.start(applicationContext)
         lifecycleScope.launch {
             ShizukuGateway.state.first { it == ShizukuState.READY }
             val report = HeadUnitSetup(applicationContext).grantLauncherAccess()

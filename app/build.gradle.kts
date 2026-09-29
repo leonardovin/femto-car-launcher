@@ -252,6 +252,8 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+        // Android 9 fork: the head unit's vehicle service interface (src/main/aidl).
+        aidl = true
     }
     sourceSets {
         getByName("main") {

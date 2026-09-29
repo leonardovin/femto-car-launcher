@@ -13,6 +13,12 @@ internal sealed interface HomeAction {
 
     data object OpenAppDrawer : HomeAction
 
+    /** Open the vehicle (climate) panel; intercepted by the dashboard like [OpenAppDrawer]. */
+    data object OpenClimate : HomeAction
+
+    /** Open the head unit's own climate app from the vehicle panel. */
+    data object OpenClimateApp : HomeAction
+
     data object OpenMaps : HomeAction
 
     /** Bring the navigation app behind the guidance card back to the front. */

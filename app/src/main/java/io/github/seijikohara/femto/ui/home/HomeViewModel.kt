@@ -61,6 +61,9 @@ import java.io.File
 
 private const val TAG = "HomeViewModel"
 
+// The head unit's own climate screen (beantechs), opened from the vehicle panel.
+private const val OEM_CLIMATE_PACKAGE = "com.beantechs.hvac"
+
 internal class HomeViewModel(
     private val locationFlow: Flow<Location?>,
     private val addressFlow: Flow<ShortAddress?>,
@@ -180,6 +183,15 @@ internal class HomeViewModel(
                 // layer (DashboardContent intercepts this action before it reaches
                 // here). Kept in the sealed action so the dock's APPS nav spec can
                 // dispatch it; a no-op if it ever reaches the ViewModel.
+            }
+
+            HomeAction.OpenClimate -> {
+                // Intercepted by DashboardContent like OpenAppDrawer.
+            }
+
+            HomeAction.OpenClimateApp -> {
+                resolveMusicSourceComponent(OEM_CLIMATE_PACKAGE)
+                    ?.let { mutableEvents.tryEmit(HomeEvent.LaunchComponent(it)) }
             }
 
             is HomeAction.LaunchApp -> {
