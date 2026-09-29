@@ -330,6 +330,10 @@ dependencies {
     implementation(platform(libs.okhttp.bom))
     implementation(libs.okhttp)
     implementation(libs.aboutlibraries.core)
+    // Android 9 fork: ADB-level access through Shizuku for head-unit setup and
+    // the vehicle service (see ANDROID9-FORK-PLAN.md).
+    implementation(libs.shizuku.api)
+    implementation(libs.shizuku.provider)
 
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.material3)

@@ -67,6 +67,9 @@ internal fun SettingsScreen(
     onOpenLicenses: () -> Unit,
     onOpenDocument: (SettingsDocument) -> Unit,
     modifier: Modifier = Modifier,
+    // Android 9 fork: the head-unit (Shizuku) block of the System category. A slot
+    // so this screen stays pure: the Route supplies its own ViewModel-bound block.
+    headUnitContent: @Composable () -> Unit = {},
 ) = Surface(
     modifier = modifier.fillMaxSize(),
     // Hosted in the settings bottom sheet: match the M3 sheet container colour so the
@@ -92,6 +95,7 @@ internal fun SettingsScreen(
                 onOpenDiagnostics = onOpenDiagnostics,
                 onOpenLicenses = onOpenLicenses,
                 onOpenDocument = onOpenDocument,
+                headUnitContent = headUnitContent,
             )
         // Hoisted here (not the ViewModel): which category is showing is pure
         // navigation state, not a persisted setting. rememberSaveable keeps it
@@ -220,6 +224,7 @@ private fun settingsCategoryEntries(
     onOpenDiagnostics: () -> Unit,
     onOpenLicenses: () -> Unit,
     onOpenDocument: (SettingsDocument) -> Unit,
+    headUnitContent: @Composable () -> Unit,
 ): List<SettingsCategoryEntry> =
     listOf(
         SettingsCategoryEntry(SettingsCategoryId.APPEARANCE) {
@@ -251,6 +256,7 @@ private fun settingsCategoryEntries(
                 onOpenDiagnostics = onOpenDiagnostics,
                 onOpenLicenses = onOpenLicenses,
                 onOpenDocument = onOpenDocument,
+                headUnitContent = headUnitContent,
             )
         },
     )

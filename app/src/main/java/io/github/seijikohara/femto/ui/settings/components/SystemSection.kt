@@ -21,7 +21,9 @@ internal fun SystemSection(
     onOpenLicenses: () -> Unit,
     onOpenDocument: (SettingsDocument) -> Unit,
     modifier: Modifier = Modifier,
+    headUnitContent: @Composable () -> Unit = {},
 ) = Column(modifier = modifier) {
+    headUnitContent()
     ActionRow(
         title = stringResource(R.string.settings_open_notification_access),
         onClick = onOpenNotificationAccess,

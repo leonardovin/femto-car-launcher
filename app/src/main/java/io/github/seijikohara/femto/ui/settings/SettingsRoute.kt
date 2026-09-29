@@ -13,6 +13,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import io.github.seijikohara.femto.data.common.hasRecordAudioPermission
 import io.github.seijikohara.femto.data.fonts.FontSlot
+import io.github.seijikohara.femto.ui.settings.components.HeadUnitRoute
 
 /**
  * Settings entry point: binds [SettingsViewModel], collects its state, and
@@ -86,5 +87,6 @@ internal fun SettingsRoute(
         onOpenLicenses = onOpenLicenses,
         onOpenDocument = onOpenDocument,
         modifier = modifier,
+        headUnitContent = { HeadUnitRoute() },
     )
 }

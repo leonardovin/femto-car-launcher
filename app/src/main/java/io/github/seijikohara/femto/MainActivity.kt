@@ -52,6 +52,9 @@ import io.github.seijikohara.femto.data.location.LocationGraph
 import io.github.seijikohara.femto.data.location.hasCoarseLocationPermission
 import io.github.seijikohara.femto.data.location.hasFineLocationPermission
 import io.github.seijikohara.femto.data.navigation.NavigationGuidance
+import io.github.seijikohara.femto.data.privileged.HeadUnitSetup
+import io.github.seijikohara.femto.data.privileged.ShizukuGateway
+import io.github.seijikohara.femto.data.privileged.ShizukuState
 import io.github.seijikohara.femto.data.system.SystemPermissionSignals
 import io.github.seijikohara.femto.data.update.UpdateChannel
 import io.github.seijikohara.femto.data.update.dismissUpdateNotification
@@ -134,6 +137,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         requestRuntimePermissions()
         observeBackgroundRanging()
+        observeShizuku()
         // Keep the cached fullscreen choice in sync so onWindowFocusChanged can
         // re-hide the bars after focus returns from another Activity.
         lifecycleScope.launch {
@@ -361,6 +365,8 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         dismissUpdateNotification()
+        // Shizuku may have been started (or allowed) while the launcher was away.
+        ShizukuGateway.refresh()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {
@@ -687,6 +693,18 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+        }
+    }
+
+    // Android 9 fork: once Shizuku is running and allowed, grant the access a
+    // locked-down head unit makes hard to give by hand (listener, runtime
+    // permissions, battery exemption). Idempotent, so every launch re-asserts it.
+    private fun observeShizuku() {
+        ShizukuGateway.start()
+        lifecycleScope.launch {
+            ShizukuGateway.state.first { it == ShizukuState.READY }
+            val report = HeadUnitSetup(applicationContext).grantLauncherAccess()
+            if (!report.succeeded) Log.w(TAG, "head-unit setup incomplete: ${report.failed}")
         }
     }
 
