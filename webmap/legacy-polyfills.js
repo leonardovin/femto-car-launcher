@@ -83,14 +83,18 @@
     // Error and DOMException became structured-cloneable in Chromium 77;
     // MapLibre posts abort errors across the worker boundary. On a
     // DataCloneError the message is retried with every error replaced by a
-    // plain { name, message, stack } object. Only plain objects and arrays are
+    // plain { $name, name, message, stack } object. Only plain objects and arrays are
     // walked, so buffers (and the transfer list) keep their identity.
     const isError = (value) =>
         value instanceof Error ||
         (typeof DOMException !== "undefined" && value instanceof DOMException);
     const withPlainErrors = (value) => {
         if (isError(value)) {
-            return { name: value.name, message: value.message, stack: value.stack };
+            // $name is MapLibre's worker-serialization class tag: with it the
+            // receiving actor rebuilds a real Error (keeping name "AbortError",
+            // so a cancelled request still reads as an abort) instead of
+            // stringifying a plain object into "[object Object]".
+            return { $name: "Error", name: value.name, message: value.message, stack: value.stack };
         }
         if (Array.isArray(value)) return value.map(withPlainErrors);
         if (value !== null && typeof value === "object") {
@@ -136,6 +140,39 @@
     ) {
         unwrapTransfer(root);
     }
+
+    // TextMetrics.actualBoundingBox* arrived in Chromium 77; MapLibre's local
+    // glyph rasterizer (TinySDF, used for CJK and other locally drawn labels)
+    // sizes each glyph from them, and without them every glyph measures zero
+    // wide and getImageData throws. Older engines get em-box estimates
+    // derived from the context's font size.
+    const patchMeasureText = (proto) => {
+        if (!proto || typeof proto.measureText !== "function") return;
+        const original = proto.measureText;
+        proto.measureText = function measureText(text) {
+            const metrics = original.call(this, text);
+            if (typeof metrics.actualBoundingBoxAscent === "number") return metrics;
+            const match = /(\d+(?:\.\d+)?)px/.exec(this.font || "");
+            const size = match ? Number(match[1]) : 10;
+            return {
+                width: metrics.width,
+                actualBoundingBoxLeft: 0,
+                actualBoundingBoxRight: metrics.width,
+                actualBoundingBoxAscent: size * 0.9,
+                actualBoundingBoxDescent: size * 0.25,
+            };
+        };
+    };
+    patchMeasureText(
+        typeof CanvasRenderingContext2D === "undefined"
+            ? undefined
+            : CanvasRenderingContext2D.prototype,
+    );
+    patchMeasureText(
+        typeof OffscreenCanvasRenderingContext2D === "undefined"
+            ? undefined
+            : OffscreenCanvasRenderingContext2D.prototype,
+    );
 
     define(root, "queueMicrotask", (callback) => {
         Promise.resolve()
