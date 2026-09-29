@@ -105,6 +105,21 @@ Media already flows through `MediaSession` for any player; the gaps are start-up
 - Check on the car: WebView version (Diagnostics → WebView), ABI, Vulkan flyover fallback, GPS,
   vehicle strip read/write, notification-listener self-grant, HOME role.
 
+## Handoff: continuing on another machine
+
+- Code: `git clone -b android-9 git@github.com:leonardovin/femto-car-launcher.git` (add the original
+  as `upstream`: `https://github.com/seijikohara/femto-car-launcher.git`).
+- Ready-made APK: the `android9-preview-*` pre-release on the fork (debug-signed, minSdk 28,
+  arm64-v8a + x86_64); install it with `scripts/deploy-to-car.sh <serial>` via `APK_PATH=...`.
+- On Windows set `git config core.autocrlf false` and `git config core.eol lf` before building
+  (CRLF breaks the webmap formatter check and Spotless). `local.properties` needs `sdk.dir`
+  with forward slashes. The build needs JDK 21 and Android SDK platform 37 (AGP downloads it),
+  NDK 27.2.12479018 and CMake 3.22.1; Node/pnpm come from Gradle.
+- Verify: `./gradlew :app:spotlessKotlinCheck :app:lintStableDebug :app:testStableDebugUnitTest :app:assembleStableDebug`.
+- API 28 emulator: `hw.gps=yes` in the AVD config and boot with
+  `-feature GLESDynamicVersion -gpu host` (with GLES 2 the Chromium 69 WebView segfaults).
+- Everything done so far is in the Status table above; what is left is the on-car checklist below.
+
 ## On-car checklist (not verifiable on the emulator)
 
 1. Install: `./gradlew :app:assembleStableDebug && scripts/deploy-to-car.sh <serial>`.
