@@ -66,9 +66,18 @@ internal object VehicleRepository {
         scope.launch {
             ShizukuGateway.state.collectLatest { shizuku ->
                 disconnect(packageName)
-                while (shizuku == ShizukuState.READY && service.value == null) {
-                    connect(packageName)
-                    if (service.value == null) delay(RECONNECT_DELAY_MS)
+                // While Shizuku is up, keep the link alive: connect when there is
+                // none (late boot, a failed write dropped it) and drop one whose
+                // binder died so the next pass reconnects.
+                while (shizuku == ShizukuState.READY) {
+                    val current = service.value
+                    if (current == null) {
+                        connect(packageName)
+                    } else if (!isAlive(current)) {
+                        service.value = null
+                        continue
+                    }
+                    delay(RECONNECT_DELAY_MS)
                 }
             }
         }
@@ -93,6 +102,9 @@ internal object VehicleRepository {
         return delivered
     }
 
+    private suspend fun isAlive(remote: IIntelligentVehicleControlService): Boolean =
+        withContext(Dispatchers.IO) { runCatching { remote.asBinder().pingBinder() }.getOrDefault(false) }
+
     private suspend fun connect(packageName: String) =
         withContext(Dispatchers.IO) {
             runCatching {
@@ -106,7 +118,12 @@ internal object VehicleRepository {
                 remote
             }.onFailure { Log.w(TAG, "vehicle service unavailable", it) }
                 .getOrNull()
-                ?.let { service.value = it }
+                ?.let { remote ->
+                    service.value = remote
+                    // A launcher that died mid-write would leave the OEM climate
+                    // app parked; every successful (re)connect brings it back.
+                    guard.heal()
+                }
         }
 
     private suspend fun disconnect(packageName: String) =

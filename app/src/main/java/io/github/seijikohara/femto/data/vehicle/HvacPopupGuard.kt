@@ -49,6 +49,15 @@ internal class HvacPopupGuard(
         }
     }
 
+    /** Re-enable the OEM climate app unconditionally (recovery after a crash mid-write). */
+    suspend fun heal() {
+        mutex.withLock {
+            resumeJob?.cancel()
+            shell(arrayOf("pm", "enable", HVAC_PACKAGE))
+            suspended = false
+        }
+    }
+
     private fun scheduleResume() {
         resumeJob?.cancel()
         resumeJob =

@@ -186,11 +186,16 @@ class MainActivity : ComponentActivity() {
             // store) and threaded down like `display` above. Null-initial and gated
             // with `display` below.
             val dockConfig by remember {
+                // The CLIMATE button only exists where the vehicle service does:
+                // elsewhere it is dropped from the order too, so the dock editor
+                // never offers a button that cannot appear.
+                val vehicleAvailable = VehicleRepository.state.map { it.available }.distinctUntilChanged()
                 combine(
-                    dockPreferences.navOrder,
-                    // The CLIMATE button only exists where the vehicle service does.
-                    combine(dockPreferences.navHidden, VehicleRepository.state) { hidden, vehicle ->
-                        if (vehicle.available) hidden else hidden + DockNavId.CLIMATE
+                    combine(dockPreferences.navOrder, vehicleAvailable) { order, available ->
+                        if (available) order else order - DockNavId.CLIMATE
+                    },
+                    combine(dockPreferences.navHidden, vehicleAvailable) { hidden, available ->
+                        if (available) hidden else hidden + DockNavId.CLIMATE
                     },
                     dockPreferences.statusOrder,
                     dockPreferences.statusHidden,
