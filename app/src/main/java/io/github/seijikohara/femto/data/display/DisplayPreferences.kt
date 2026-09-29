@@ -62,6 +62,8 @@ internal interface DisplaySettingsStore {
 
     suspend fun setAssistantLaunch(value: AssistantLaunchSetting)
 
+    suspend fun setNavigationApp(value: NavigationAppSetting)
+
     suspend fun setMapStyle(value: MapStyleSetting)
 
     suspend fun setMapSchemeLight(value: MapColorScheme)
@@ -180,6 +182,7 @@ internal class DisplayPreferences(
                     orientation = prefs[ORIENTATION_KEY].toEnumOr(OrientationSetting.AUTO),
                     keepScreenOn = prefs[KEEP_SCREEN_ON_KEY] ?: true,
                     assistantLaunch = prefs[ASSISTANT_LAUNCH_KEY].toEnumOr(AssistantLaunchSetting.SYSTEM),
+                    navigationApp = prefs[NAVIGATION_APP_KEY].toEnumOr(NavigationAppSetting.GOOGLE_MAPS),
                     mapStyle = prefs[MAP_STYLE_KEY].toEnumOr(MapStyleSetting.AUTO),
                     mapSchemeLight = prefs[MAP_SCHEME_LIGHT_KEY].toEnumOr(MapColorScheme.ACCENT),
                     mapSchemeDark = prefs[MAP_SCHEME_DARK_KEY].toEnumOr(MapColorScheme.ACCENT),
@@ -274,6 +277,10 @@ internal class DisplayPreferences(
 
     override suspend fun setAssistantLaunch(value: AssistantLaunchSetting) {
         context.displayDataStore.editOrLog(TAG) { it[ASSISTANT_LAUNCH_KEY] = value.name }
+    }
+
+    override suspend fun setNavigationApp(value: NavigationAppSetting) {
+        context.displayDataStore.editOrLog(TAG) { it[NAVIGATION_APP_KEY] = value.name }
     }
 
     override suspend fun setMapStyle(value: MapStyleSetting) {
@@ -447,6 +454,7 @@ internal class DisplayPreferences(
         val ORIENTATION_KEY = stringPreferencesKey("orientation")
         val KEEP_SCREEN_ON_KEY = booleanPreferencesKey("keep_screen_on")
         val ASSISTANT_LAUNCH_KEY = stringPreferencesKey("assistant_launch")
+        val NAVIGATION_APP_KEY = stringPreferencesKey("navigation_app")
         val MAP_STYLE_KEY = stringPreferencesKey("map_style")
         val MAP_SCHEME_LIGHT_KEY = stringPreferencesKey("map_scheme_light")
         val MAP_SCHEME_DARK_KEY = stringPreferencesKey("map_scheme_dark")
@@ -508,6 +516,7 @@ internal class DisplayPreferences(
                 ORIENTATION_KEY,
                 KEEP_SCREEN_ON_KEY,
                 ASSISTANT_LAUNCH_KEY,
+                NAVIGATION_APP_KEY,
                 MAP_STYLE_KEY,
                 MAP_SCHEME_LIGHT_KEY,
                 MAP_SCHEME_DARK_KEY,

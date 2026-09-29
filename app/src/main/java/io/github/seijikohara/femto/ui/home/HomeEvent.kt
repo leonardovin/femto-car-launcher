@@ -3,6 +3,7 @@ package io.github.seijikohara.femto.ui.home
 import android.content.ComponentName
 import io.github.seijikohara.femto.data.dock.DockNavId
 import io.github.seijikohara.femto.data.dock.DockStatusId
+import io.github.seijikohara.femto.data.navigation.NavigationGuidance
 
 /**
  * One-shot side-effect signals emitted by [HomeViewModel] for the host to act on.
@@ -37,6 +38,15 @@ internal sealed interface HomeEvent {
     data class LaunchGeo(
         val latitude: Double,
         val longitude: Double,
+    ) : HomeEvent
+
+    /**
+     * Bring the navigation app back to the front: its guidance notification's
+     * own content intent when it has one (resumes the route screen), else the
+     * app's launcher entry.
+     */
+    data class OpenNavigation(
+        val guidance: NavigationGuidance,
     ) : HomeEvent
 
     /**

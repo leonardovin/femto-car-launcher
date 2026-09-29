@@ -42,6 +42,7 @@ import io.github.seijikohara.femto.data.display.ClockSetting
 import io.github.seijikohara.femto.data.display.DisplayPreferences
 import io.github.seijikohara.femto.data.display.DisplaySettings
 import io.github.seijikohara.femto.data.display.FullscreenSetting
+import io.github.seijikohara.femto.data.display.NavigationAppSetting
 import io.github.seijikohara.femto.data.display.OrientationSetting
 import io.github.seijikohara.femto.data.display.ThemeMode
 import io.github.seijikohara.femto.data.dock.DockPreferences
@@ -50,6 +51,7 @@ import io.github.seijikohara.femto.data.fonts.FontSlot
 import io.github.seijikohara.femto.data.location.LocationGraph
 import io.github.seijikohara.femto.data.location.hasCoarseLocationPermission
 import io.github.seijikohara.femto.data.location.hasFineLocationPermission
+import io.github.seijikohara.femto.data.navigation.NavigationGuidance
 import io.github.seijikohara.femto.data.system.SystemPermissionSignals
 import io.github.seijikohara.femto.data.update.UpdateChannel
 import io.github.seijikohara.femto.data.update.dismissUpdateNotification
@@ -430,11 +432,24 @@ class MainActivity : ComponentActivity() {
             }
 
             is HomeEvent.LaunchAppCategory -> {
-                launchAppCategory(event.intentCategory)
+                // The maps category honours the elected navigation app first.
+                val navigationPackage =
+                    installedNavigationPackage(display.navigationApp)
+                        .takeIf { event.intentCategory == Intent.CATEGORY_APP_MAPS }
+                val launched =
+                    navigationPackage
+                        ?.let { packageManager.getLaunchIntentForPackage(it) }
+                        ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        ?.let(::tryStartActivity) == true
+                if (!launched) launchAppCategory(event.intentCategory)
             }
 
             is HomeEvent.LaunchGeo -> {
-                launchGeo(event.latitude, event.longitude)
+                launchGeo(event.latitude, event.longitude, installedNavigationPackage(display.navigationApp))
+            }
+
+            is HomeEvent.OpenNavigation -> {
+                openNavigation(event.guidance)
             }
 
             is HomeEvent.AdjustMapZoom -> {
@@ -579,13 +594,39 @@ class MainActivity : ComponentActivity() {
     private fun launchGeo(
         latitude: Double,
         longitude: Double,
+        navigationPackage: String?,
     ) {
-        // A bare geo: URI lets whichever maps app the user has elected resolve
-        // the position — no provider or package is hard-coded.
+        // A geo: URI, pinned to the navigation app elected in Settings when it is
+        // installed; otherwise whichever maps app the device elected resolves it.
         val intent =
             Intent(Intent.ACTION_VIEW, "geo:$latitude,$longitude?z=$MAPS_ZOOM_LEVEL".toUri())
                 .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-        tryStartActivity(intent)
+        val pinned = navigationPackage?.let { tryStartActivity(Intent(intent).setPackage(it)) } == true
+        if (!pinned) tryStartActivity(intent)
+    }
+
+    // The elected navigation app's package when it is installed; null for the
+    // system default or an app missing from this device.
+    private fun installedNavigationPackage(setting: NavigationAppSetting): String? =
+        setting.packageName?.takeIf { packageName ->
+            runCatching { packageManager.getApplicationInfo(packageName, 0).enabled }.getOrDefault(false)
+        }
+
+    // The guidance notification's content intent reopens the live route screen;
+    // a cancelled intent (the route just ended) falls back to the app itself.
+    private fun openNavigation(guidance: NavigationGuidance) {
+        val sent =
+            guidance.contentIntent?.let { intent ->
+                runCatching { intent.send() }
+                    .onFailure { Log.w(TAG, "navigation content intent rejected", it) }
+                    .isSuccess
+            } == true
+        if (!sent) {
+            packageManager
+                .getLaunchIntentForPackage(guidance.packageName)
+                ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ?.let(::tryStartActivity)
+        }
     }
 
     private fun openNotificationListenerSettings() {

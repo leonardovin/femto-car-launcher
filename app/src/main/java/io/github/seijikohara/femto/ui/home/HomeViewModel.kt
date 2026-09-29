@@ -34,6 +34,8 @@ import io.github.seijikohara.femto.data.music.AudioSpectrumRepository
 import io.github.seijikohara.femto.data.music.MusicCardState
 import io.github.seijikohara.femto.data.music.MusicCommand
 import io.github.seijikohara.femto.data.music.MusicSessionRepository
+import io.github.seijikohara.femto.data.navigation.NavigationGuidance
+import io.github.seijikohara.femto.data.navigation.NavigationGuidanceRepository
 import io.github.seijikohara.femto.data.system.SystemStatus
 import io.github.seijikohara.femto.data.system.SystemStatusRepository
 import io.github.seijikohara.femto.data.update.UpdateRepository
@@ -74,6 +76,9 @@ internal class HomeViewModel(
     // The updater's state; drives the dock's update badge. Defaults to a build that
     // never checks, so previews and tests that do not exercise the badge are unaffected.
     private val updateStateFlow: Flow<UpdateState> = flowOf(UpdateState.Disabled),
+    // The navigation app's live turn-by-turn state (read from its notification);
+    // drives the guidance card. Defaults to "no guidance" for previews and tests.
+    private val navigationGuidanceFlow: Flow<NavigationGuidance?> = flowOf(null),
     // The boot clock the motion gate judges a fix's age against; tests pin it,
     // because Robolectric's clock starts at zero.
     private val nowElapsedRealtimeNanos: () -> Long = SystemClock::elapsedRealtimeNanos,
@@ -127,8 +132,12 @@ internal class HomeViewModel(
             calendarFlow.catchAsDefault(TAG, "calendar", HomeUiState.Initial.calendar),
             systemStatusFlow.catchAsDefault(TAG, "system status", HomeUiState.Initial.systemStatus),
             tripStateFlow.catchAsDefault(TAG, "trip state", HomeUiState.Initial.tripState),
-            onlineFlow.catchAsDefault(TAG, "connectivity", HomeUiState.Initial.online),
-        ) { core, calendar, systemStatus, tripState, online ->
+            // Paired to stay within combine's typed five-flow overloads.
+            combine(
+                onlineFlow.catchAsDefault(TAG, "connectivity", HomeUiState.Initial.online),
+                navigationGuidanceFlow.catchAsDefault(TAG, "navigation", HomeUiState.Initial.navigation),
+            ) { online, navigation -> online to navigation },
+        ) { core, calendar, systemStatus, tripState, (online, navigation) ->
             HomeUiState(
                 location = core.location,
                 address = core.address,
@@ -139,6 +148,7 @@ internal class HomeViewModel(
                 tripState = tripState,
                 online = online,
                 updateBadge = core.updateBadge,
+                navigation = navigation,
             )
         }.stateIn(viewModelScope, WhileUiSubscribed, HomeUiState.Initial)
 
@@ -185,6 +195,10 @@ internal class HomeViewModel(
                         ?.let { HomeEvent.LaunchGeo(it.latitude, it.longitude) }
                         ?: HomeEvent.LaunchAppCategory(Intent.CATEGORY_APP_MAPS),
                 )
+            }
+
+            HomeAction.OpenNavigation -> {
+                uiState.value.navigation?.let { mutableEvents.tryEmit(HomeEvent.OpenNavigation(it)) }
             }
 
             is HomeAction.Shortcut -> {
@@ -374,6 +388,7 @@ internal class HomeViewModelFactory(
             // observe() resolves the updater off the main thread, so neither the
             // cold start nor the first frame waits for it.
             updateStateFlow = UpdateRepository.observe(application) { it.state },
+            navigationGuidanceFlow = NavigationGuidanceRepository.guidance,
             sendMusicCommand = music::send,
             resumeLastMusicSession = music::dispatchPlayMediaKey,
             resetTrip = locationGraph::resetTrip,

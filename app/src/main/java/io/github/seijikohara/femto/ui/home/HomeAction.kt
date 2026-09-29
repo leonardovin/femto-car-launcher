@@ -15,6 +15,9 @@ internal sealed interface HomeAction {
 
     data object OpenMaps : HomeAction
 
+    /** Bring the navigation app behind the guidance card back to the front. */
+    data object OpenNavigation : HomeAction
+
     data object ConnectMusicPlayer : HomeAction
 
     /** Open the app behind the current media session (the music card's source icon). */

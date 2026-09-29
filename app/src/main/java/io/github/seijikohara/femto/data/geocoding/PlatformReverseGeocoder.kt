@@ -53,7 +53,8 @@ internal class PlatformReverseGeocoder(
                     // Below API 33 only the blocking overload exists; this
                     // already runs on the IO dispatcher.
                     @Suppress("DEPRECATION")
-                    return@runCatching geocoder.getFromLocation(latitude, longitude, 1)
+                    return@runCatching geocoder
+                        .getFromLocation(latitude, longitude, 1)
                         ?.firstOrNull()
                         ?.toShortAddressOrNull()
                 }

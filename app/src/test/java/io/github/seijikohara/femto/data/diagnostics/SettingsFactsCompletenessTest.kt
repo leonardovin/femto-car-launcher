@@ -59,6 +59,7 @@ class SettingsFactsCompletenessTest {
             "orientation" to "Orientation",
             "keepScreenOn" to "Keep screen on",
             "assistantLaunch" to "Assistant launch",
+            "navigationApp" to "Navigation app",
             "mapBackend" to "Map backend",
             "mapStyle" to "Map style",
             "mapSchemeLight" to "Map schemes",

@@ -49,6 +49,7 @@ internal fun displaySettingsFacts(display: DisplaySettings): List<DiagnosticFact
         entry("Orientation", display.orientation.name),
         entry("Keep screen on", "${display.keepScreenOn}"),
         entry("Assistant launch", display.assistantLaunch.name),
+        entry("Navigation app", display.navigationApp.name),
         entry("Map backend", display.mapBackend.name),
         entry("Map style", display.mapStyle.name),
         entry("Map schemes", "${display.mapSchemeLight.name} / ${display.mapSchemeDark.name}"),

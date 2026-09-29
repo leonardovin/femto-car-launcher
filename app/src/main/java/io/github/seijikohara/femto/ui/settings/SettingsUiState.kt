@@ -16,6 +16,7 @@ import io.github.seijikohara.femto.data.display.MapBackend
 import io.github.seijikohara.femto.data.display.MapColorScheme
 import io.github.seijikohara.femto.data.display.MapStyleSetting
 import io.github.seijikohara.femto.data.display.MotionTier
+import io.github.seijikohara.femto.data.display.NavigationAppSetting
 import io.github.seijikohara.femto.data.display.OrientationSetting
 import io.github.seijikohara.femto.data.display.SettingsSectionId
 import io.github.seijikohara.femto.data.display.SpeedUnitSetting
@@ -57,6 +58,7 @@ internal data class SettingsUiState(
     val orientation: OrientationSetting,
     val keepScreenOn: Boolean,
     val assistantLaunch: AssistantLaunchSetting,
+    val navigationApp: NavigationAppSetting,
     val mapStyle: MapStyleSetting,
     val mapSchemeLight: MapColorScheme,
     val mapSchemeDark: MapColorScheme,
@@ -131,6 +133,7 @@ internal data class SettingsUiState(
                 orientation = DisplaySettings.Default.orientation,
                 keepScreenOn = DisplaySettings.Default.keepScreenOn,
                 assistantLaunch = DisplaySettings.Default.assistantLaunch,
+                navigationApp = DisplaySettings.Default.navigationApp,
                 mapStyle = DisplaySettings.Default.mapStyle,
                 mapSchemeLight = DisplaySettings.Default.mapSchemeLight,
                 mapSchemeDark = DisplaySettings.Default.mapSchemeDark,
@@ -245,6 +248,10 @@ internal sealed interface SettingsAction {
 
     data class SetAssistantLaunch(
         val value: AssistantLaunchSetting,
+    ) : SettingsAction
+
+    data class SetNavigationApp(
+        val value: NavigationAppSetting,
     ) : SettingsAction
 
     data class SetMapStyle(

@@ -232,7 +232,10 @@ internal class SystemStatusRepository(
                 caps.signalStrength
             } else {
                 @Suppress("DEPRECATION")
-                context.applicationContext.getSystemService<WifiManager>()?.connectionInfo?.rssi ?: Int.MIN_VALUE
+                context.applicationContext
+                    .getSystemService<WifiManager>()
+                    ?.connectionInfo
+                    ?.rssi ?: Int.MIN_VALUE
             }
         if (rssi == Int.MIN_VALUE) return 0
         return when {

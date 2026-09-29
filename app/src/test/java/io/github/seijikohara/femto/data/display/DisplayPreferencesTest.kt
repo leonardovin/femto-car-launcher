@@ -248,6 +248,7 @@ class DisplayPreferencesTest {
             val expected =
                 mutated.copy(
                     mapBackend = DisplaySettings.Default.mapBackend,
+                    navigationApp = DisplaySettings.Default.navigationApp,
                     googleMapsApiKey = DisplaySettings.Default.googleMapsApiKey,
                     googleMapsMapId = DisplaySettings.Default.googleMapsMapId,
                     googleMapsRendering = DisplaySettings.Default.googleMapsRendering,
@@ -335,6 +336,7 @@ class DisplayPreferencesTest {
         setOrientation(OrientationSetting.PORTRAIT)
         setKeepScreenOn(false)
         setAssistantLaunch(AssistantLaunchSetting.IN_APP)
+        setNavigationApp(NavigationAppSetting.WAZE)
         setMapStyle(MapStyleSetting.DARK)
         setMapSchemeLight(MapColorScheme.BRIGHT)
         setMapSchemeDark(MapColorScheme.FIORD)

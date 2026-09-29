@@ -19,6 +19,7 @@ import io.github.seijikohara.femto.data.display.MapBackend
 import io.github.seijikohara.femto.data.display.MapColorScheme
 import io.github.seijikohara.femto.data.display.MapStyleSetting
 import io.github.seijikohara.femto.data.display.MotionTier
+import io.github.seijikohara.femto.data.display.NavigationAppSetting
 import io.github.seijikohara.femto.data.display.OrientationSetting
 import io.github.seijikohara.femto.data.display.SpeedUnitSetting
 import io.github.seijikohara.femto.data.display.TemperatureUnitSetting
@@ -74,6 +75,8 @@ internal class FakeDisplaySettingsStore(
         state.update {
             it.copy(assistantLaunch = value)
         }
+
+    override suspend fun setNavigationApp(value: NavigationAppSetting) = state.update { it.copy(navigationApp = value) }
 
     override suspend fun setMapStyle(value: MapStyleSetting) = state.update { it.copy(mapStyle = value) }
 
@@ -224,6 +227,10 @@ internal class FakeDisplaySettingsStore(
 
             DisplayPreferences.ASSISTANT_LAUNCH_KEY -> {
                 copy(assistantLaunch = default.assistantLaunch)
+            }
+
+            DisplayPreferences.NAVIGATION_APP_KEY -> {
+                copy(navigationApp = default.navigationApp)
             }
 
             DisplayPreferences.MAP_STYLE_KEY -> {

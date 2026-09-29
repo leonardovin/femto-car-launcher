@@ -22,7 +22,7 @@ screen *and* the overlay bottom bar. Constraints of the target unit:
 | 1 | minSdk 33 → 28, every `NewApi` finding guarded with an Android 9 fallback | done |
 | 2 | Runtime fixes found on an API 28 emulator (system-broadcast receivers, Bluetooth permission) | done |
 | 3 | Live OSM map on Chromium 67–76 WebViews (syntax floor chrome67 + runtime polyfills) | done |
-| 4 | Google Maps via the installed app (no API key, no billing) | planned |
+| 4 | Google Maps via the installed app (no API key, no billing) | done (underlay mode: later) |
 | 5 | Shizuku integration layer inside the launcher | planned |
 | 6 | Port the bottom-bar vehicle controls into the dock | planned |
 | 7 | Spotify / Apple Music first-class integration | planned |

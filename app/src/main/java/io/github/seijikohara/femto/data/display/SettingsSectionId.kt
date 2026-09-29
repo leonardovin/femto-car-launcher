@@ -66,6 +66,7 @@ internal enum class SettingsSectionId(
     MAP(
         setOf(
             DisplayPreferences.MAP_BACKEND_KEY,
+            DisplayPreferences.NAVIGATION_APP_KEY,
             DisplayPreferences.GOOGLE_MAPS_API_KEY_KEY,
             DisplayPreferences.GOOGLE_MAPS_MAP_ID_KEY,
             DisplayPreferences.GOOGLE_MAPS_RENDERING_KEY,

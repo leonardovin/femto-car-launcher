@@ -30,6 +30,7 @@ import io.github.seijikohara.femto.data.display.GoogleMapsRendering
 import io.github.seijikohara.femto.data.display.MAX_MAP_ZOOM
 import io.github.seijikohara.femto.data.display.MIN_MAP_ZOOM
 import io.github.seijikohara.femto.data.display.MapBackend
+import io.github.seijikohara.femto.data.display.NavigationAppSetting
 import io.github.seijikohara.femto.ui.settings.SettingsAction
 import io.github.seijikohara.femto.ui.settings.SettingsDocument
 import io.github.seijikohara.femto.ui.settings.SettingsUiState
@@ -56,6 +57,19 @@ internal fun MapSection(
     var showGoogleMapIdDialog by remember { mutableStateOf(false) }
     var showTileHostDialog by remember { mutableStateOf(false) }
     Column(modifier = modifier) {
+        // Navigation runs in the navigation app itself (no billed maps API): the
+        // dock hands the route off to it and the dashboard mirrors its guidance.
+        ChoiceRow(
+            title = stringResource(R.string.settings_navigation_app),
+            options =
+                listOf(
+                    NavigationAppSetting.GOOGLE_MAPS to stringResource(R.string.settings_navigation_app_google_maps),
+                    NavigationAppSetting.WAZE to stringResource(R.string.settings_navigation_app_waze),
+                    NavigationAppSetting.SYSTEM to stringResource(R.string.settings_navigation_app_system),
+                ),
+            selected = uiState.navigationApp,
+            onSelect = { onAction(SettingsAction.SetNavigationApp(it)) },
+        )
         // Selecting Google Maps persists the backend switch immediately (sticky
         // selection; a missing key does not revert to OSM). When the key is still
         // blank, selecting also opens its entry dialog so the user can supply one

@@ -124,6 +124,7 @@ internal class SettingsViewModel(
                 orientation = display.orientation,
                 keepScreenOn = display.keepScreenOn,
                 assistantLaunch = display.assistantLaunch,
+                navigationApp = display.navigationApp,
                 mapStyle = display.mapStyle,
                 mapSchemeLight = display.mapSchemeLight,
                 mapSchemeDark = display.mapSchemeDark,
@@ -277,6 +278,10 @@ internal class SettingsViewModel(
 
                 is SettingsAction.SetAssistantLaunch -> {
                     displayPreferences.setAssistantLaunch(action.value)
+                }
+
+                is SettingsAction.SetNavigationApp -> {
+                    displayPreferences.setNavigationApp(action.value)
                 }
 
                 is SettingsAction.SetMapStyle -> {

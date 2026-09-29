@@ -6,6 +6,7 @@ import io.github.seijikohara.femto.data.calendar.CalendarSnapshot
 import io.github.seijikohara.femto.data.geocoding.ShortAddress
 import io.github.seijikohara.femto.data.location.TripState
 import io.github.seijikohara.femto.data.music.MusicCardState
+import io.github.seijikohara.femto.data.navigation.NavigationGuidance
 import io.github.seijikohara.femto.data.system.SystemStatus
 import io.github.seijikohara.femto.data.weather.WeatherSnapshot
 
@@ -31,6 +32,9 @@ internal data class HomeUiState(
     // Fail-closed: no fix, a cached fix and a network fix never count as parked,
     // because the trip speed reads zero until live GPS fixes set it.
     val updateBadge: Boolean,
+    // The navigation app's live turn-by-turn guidance (Google Maps / Waze,
+    // mirrored from their notification), or null while no route is active.
+    val navigation: NavigationGuidance? = null,
 ) {
     companion object {
         val Initial: HomeUiState =
@@ -44,6 +48,7 @@ internal data class HomeUiState(
                 tripState = TripState.Initial,
                 online = true,
                 updateBadge = false,
+                navigation = null,
             )
     }
 }

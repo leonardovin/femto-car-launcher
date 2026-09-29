@@ -99,6 +99,7 @@ internal class PermissionFactsCollector(
     // unit where holding it is the whole point of the app.
     private fun homeRoleFact(): DiagnosticFact {
         val held = context.holdsHomeRole()
+
         @Suppress("DEPRECATION")
         val defaultPackage =
             context.packageManager

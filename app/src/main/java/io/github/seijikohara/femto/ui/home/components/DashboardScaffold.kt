@@ -620,6 +620,26 @@ private fun DashboardOverlays(
                 glassConfig = glassConfig,
                 modifier = Modifier.align(if (mirror) Alignment.TopEnd else Alignment.TopStart).padding(outerPad),
             )
+            // Turn-by-turn guidance from the navigation app, beside the compass
+            // on the map side (opposite the cards), while a route is active.
+            uiState.navigation?.let { guidance ->
+                NavigationCard(
+                    guidance = guidance,
+                    onTap = { onAction(HomeAction.OpenNavigation) },
+                    hazeState = hazeState,
+                    glassConfig = glassConfig,
+                    modifier =
+                        Modifier
+                            .align(if (mirror) Alignment.TopEnd else Alignment.TopStart)
+                            .padding(
+                                cardSideInset(
+                                    mirror = !mirror,
+                                    horizontal = outerPad + NavigationCardCompassReserve + cardGap,
+                                    top = outerPad,
+                                ),
+                            ),
+                )
+            }
             MapControlColumn(
                 showLocate = true,
                 following = following,
@@ -906,6 +926,10 @@ private fun DashboardOverlays(
 // the start edge when [mirror] anchors the dashboard to a LEFT driver. [top] / [bottom]
 // carry the unchanged vertical insets. Overlays opposite the cards (the map controls)
 // invert the alignment themselves; this helper only builds the card-side reserve.
+// The navigation card starts past the map compass, which shares its top corner
+// (MapControls' compass diameter).
+private val NavigationCardCompassReserve = 48.dp
+
 private fun cardSideInset(
     mirror: Boolean,
     horizontal: Dp,

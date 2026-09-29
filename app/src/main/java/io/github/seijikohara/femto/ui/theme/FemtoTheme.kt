@@ -22,6 +22,9 @@ import com.materialkolor.rememberDynamicColorScheme
 import io.github.seijikohara.femto.data.display.AccentColor
 import io.github.seijikohara.femto.data.display.UiScale
 
+// The DYNAMIC accent's seed below Android 12, which has no wallpaper colours.
+private val LegacySeed = AccentColor.BLUE.accentSeedColor()!!
+
 /**
  * The dark flag FemtoTheme actually rendered with, as opposed to the system
  * state [isSystemInDarkTheme] reports: when the user forces a ThemeMode in
@@ -70,6 +73,7 @@ fun FemtoTheme(
     val context = LocalContext.current
     val inPreview = LocalInspectionMode.current
     val seed = accent.accentSeedColor()
+    val hasWallpaperColors = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
     val target =
         when {
             // A fixed preset seed generates a full M3 scheme and works without a
@@ -82,8 +86,7 @@ fun FemtoTheme(
 
             // Wallpaper-derived (Monet) colors are Android 12+; below that the
             // DYNAMIC accent seeds from the BLUE preset instead.
-            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ->
-                rememberDynamicColorScheme(seedColor = AccentColor.BLUE.accentSeedColor()!!, isDark = darkTheme)
+            !hasWallpaperColors -> rememberDynamicColorScheme(seedColor = LegacySeed, isDark = darkTheme)
 
             darkTheme -> dynamicDarkColorScheme(context)
 

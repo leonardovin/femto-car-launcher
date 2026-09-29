@@ -58,6 +58,21 @@ internal enum class FullscreenSetting { OFF, ON }
 internal enum class AssistantLaunchSetting { SYSTEM, IN_APP }
 
 /**
+ * Which navigation app the dock's Navigation button hands off to, and whose
+ * turn-by-turn notification the dashboard's guidance card mirrors (Android 9
+ * fork: Google Maps is used through its app, never a billed API). [SYSTEM]
+ * defers to the device's elected maps app and mirrors any known navigation
+ * app. A named app that is not installed falls back to [SYSTEM] behaviour.
+ */
+internal enum class NavigationAppSetting(
+    val packageName: String?,
+) {
+    GOOGLE_MAPS("com.google.android.apps.maps"),
+    WAZE("com.waze"),
+    SYSTEM(null),
+}
+
+/**
  * Which screen edge hosts the dashboard dock. [BOTTOM] and [TOP] render the
  * horizontal bar; [LEFT] and [RIGHT] render it as a vertical rail.
  */
@@ -201,6 +216,7 @@ internal data class DisplaySettings(
     // Whether the dock mic launches the system assistant overlay or the
     // in-launcher voice sheet.
     val assistantLaunch: AssistantLaunchSetting,
+    val navigationApp: NavigationAppSetting,
     val mapStyle: MapStyleSetting,
     // Independent colour schemes for the light and dark map contexts (which one
     // applies follows [mapStyle] / the system theme). Both default to ACCENT.
@@ -312,6 +328,7 @@ internal data class DisplaySettings(
                 orientation = OrientationSetting.AUTO,
                 keepScreenOn = true,
                 assistantLaunch = AssistantLaunchSetting.SYSTEM,
+                navigationApp = NavigationAppSetting.GOOGLE_MAPS,
                 mapStyle = MapStyleSetting.AUTO,
                 mapSchemeLight = MapColorScheme.ACCENT,
                 mapSchemeDark = MapColorScheme.ACCENT,

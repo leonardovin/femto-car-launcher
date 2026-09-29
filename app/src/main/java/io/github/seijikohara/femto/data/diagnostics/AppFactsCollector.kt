@@ -2,8 +2,8 @@ package io.github.seijikohara.femto.data.diagnostics
 
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
-import android.os.Build
 import android.content.Context
+import android.os.Build
 import androidx.core.content.getSystemService
 import io.github.seijikohara.femto.BuildConfig
 import io.github.seijikohara.femto.data.update.UpdateChannel

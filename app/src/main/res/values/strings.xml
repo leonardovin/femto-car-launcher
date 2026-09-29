@@ -5,6 +5,11 @@
     <!-- Map panel -->
     <string name="map_unavailable">Map unavailable</string>
     <string name="map_permission_cta">Grant location access to enable the map and overlays.</string>
+    <string name="navigation_active">Navigating</string>
+    <string name="settings_navigation_app">Navigation app</string>
+    <string name="settings_navigation_app_google_maps">Google Maps</string>
+    <string name="settings_navigation_app_waze">Waze</string>
+    <string name="settings_navigation_app_system">System default</string>
     <string name="map_live_renderer_gone">Live map stopped</string>
     <string name="map_live_renderer_gone_hint">The map renderer keeps crashing on this device. Switch the map provider to OpenStreetMap in Settings.</string>
     <string name="map_live_init_failed">Live map can\'t start</string>
