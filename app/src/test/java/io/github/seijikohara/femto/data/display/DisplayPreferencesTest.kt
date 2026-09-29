@@ -277,6 +277,7 @@ class DisplayPreferencesTest {
                     showWeather = DisplaySettings.Default.showWeather,
                     showMusic = DisplaySettings.Default.showMusic,
                     musicSpectrum = DisplaySettings.Default.musicSpectrum,
+                    musicApp = DisplaySettings.Default.musicApp,
                     musicShowAlbum = DisplaySettings.Default.musicShowAlbum,
                     musicShowArt = DisplaySettings.Default.musicShowArt,
                 )
@@ -337,6 +338,7 @@ class DisplayPreferencesTest {
         setKeepScreenOn(false)
         setAssistantLaunch(AssistantLaunchSetting.IN_APP)
         setNavigationApp(NavigationAppSetting.WAZE)
+        setMusicApp(MusicAppSetting.SPOTIFY)
         setMapStyle(MapStyleSetting.DARK)
         setMapSchemeLight(MapColorScheme.BRIGHT)
         setMapSchemeDark(MapColorScheme.FIORD)

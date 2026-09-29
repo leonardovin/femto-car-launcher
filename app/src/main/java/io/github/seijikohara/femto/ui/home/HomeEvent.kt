@@ -41,6 +41,15 @@ internal sealed interface HomeEvent {
     ) : HomeEvent
 
     /**
+     * Resume the preferred music app ([packageName]): PLAY goes to its media
+     * button receiver so it resumes in the background; the host opens the app
+     * when no audio starts, or when it has no receiver / is not installed.
+     */
+    data class ResumeMusicApp(
+        val packageName: String,
+    ) : HomeEvent
+
+    /**
      * Bring the navigation app back to the front: its guidance notification's
      * own content intent when it has one (resumes the route screen), else the
      * app's launcher entry.

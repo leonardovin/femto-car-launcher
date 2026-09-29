@@ -85,6 +85,7 @@ class SettingsFactsCompletenessTest {
             "showWeather" to "Panels (calendar / weather / music)",
             "showMusic" to "Panels (calendar / weather / music)",
             "musicSpectrum" to "Music spectrum",
+            "musicApp" to "Music app",
             "musicShowAlbum" to "Music album / art",
             "musicShowArt" to "Music album / art",
             "googleMapsRendering" to "Google Maps rendering",

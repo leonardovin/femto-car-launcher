@@ -64,6 +64,8 @@ internal interface DisplaySettingsStore {
 
     suspend fun setNavigationApp(value: NavigationAppSetting)
 
+    suspend fun setMusicApp(value: MusicAppSetting)
+
     suspend fun setMapStyle(value: MapStyleSetting)
 
     suspend fun setMapSchemeLight(value: MapColorScheme)
@@ -205,6 +207,7 @@ internal class DisplayPreferences(
                     showWeather = prefs[SHOW_WEATHER_KEY] ?: true,
                     showMusic = prefs[SHOW_MUSIC_KEY] ?: true,
                     musicSpectrum = prefs[MUSIC_SPECTRUM_KEY] ?: false,
+                    musicApp = prefs[MUSIC_APP_KEY].toEnumOr(MusicAppSetting.AUTO),
                     musicShowAlbum = prefs[MUSIC_SHOW_ALBUM_KEY] ?: true,
                     musicShowArt = prefs[MUSIC_SHOW_ART_KEY] ?: true,
                     mapBackend = prefs[MAP_BACKEND_KEY].toEnumOr(MapBackend.OSM),
@@ -281,6 +284,10 @@ internal class DisplayPreferences(
 
     override suspend fun setNavigationApp(value: NavigationAppSetting) {
         context.displayDataStore.editOrLog(TAG) { it[NAVIGATION_APP_KEY] = value.name }
+    }
+
+    override suspend fun setMusicApp(value: MusicAppSetting) {
+        context.displayDataStore.editOrLog(TAG) { it[MUSIC_APP_KEY] = value.name }
     }
 
     override suspend fun setMapStyle(value: MapStyleSetting) {
@@ -477,6 +484,7 @@ internal class DisplayPreferences(
         val SHOW_WEATHER_KEY = booleanPreferencesKey("show_weather")
         val SHOW_MUSIC_KEY = booleanPreferencesKey("show_music")
         val MUSIC_SPECTRUM_KEY = booleanPreferencesKey("music_spectrum")
+        val MUSIC_APP_KEY = stringPreferencesKey("music_app")
         val MUSIC_SHOW_ALBUM_KEY = booleanPreferencesKey("music_show_album")
         val MUSIC_SHOW_ART_KEY = booleanPreferencesKey("music_show_art")
         val MAP_BACKEND_KEY = stringPreferencesKey("map_backend")
@@ -539,6 +547,7 @@ internal class DisplayPreferences(
                 SHOW_WEATHER_KEY,
                 SHOW_MUSIC_KEY,
                 MUSIC_SPECTRUM_KEY,
+                MUSIC_APP_KEY,
                 MUSIC_SHOW_ALBUM_KEY,
                 MUSIC_SHOW_ART_KEY,
                 MAP_BACKEND_KEY,

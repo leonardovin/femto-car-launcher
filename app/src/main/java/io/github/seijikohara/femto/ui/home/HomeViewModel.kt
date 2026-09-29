@@ -20,6 +20,7 @@ import io.github.seijikohara.femto.data.common.WhileUiSubscribed
 import io.github.seijikohara.femto.data.common.catchAsDefault
 import io.github.seijikohara.femto.data.common.femtoUserAgent
 import io.github.seijikohara.femto.data.display.DisplayPreferences
+import io.github.seijikohara.femto.data.display.MusicAppSetting
 import io.github.seijikohara.femto.data.geocoding.NominatimApi
 import io.github.seijikohara.femto.data.geocoding.NominatimReverseGeocoder
 import io.github.seijikohara.femto.data.geocoding.PlatformReverseGeocoder
@@ -47,6 +48,7 @@ import io.github.seijikohara.femto.data.weather.WeatherSnapshot
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.combine
@@ -91,7 +93,12 @@ internal class HomeViewModel(
     private val resolveMusicSourceComponent: (String) -> ComponentName? = { null },
     private val spectrumEnabledFlow: Flow<Boolean> = flowOf(false),
     private val spectrumBandsFor: (Flow<Boolean>) -> Flow<FloatArray?> = { flowOf(null) },
+    // The music app the idle card resumes (Settings > Panels > Music app).
+    musicAppFlow: Flow<MusicAppSetting> = flowOf(MusicAppSetting.AUTO),
 ) : ViewModel() {
+    private val musicApp: StateFlow<MusicAppSetting> =
+        musicAppFlow.stateIn(viewModelScope, SharingStarted.Eagerly, MusicAppSetting.AUTO)
+
     // The dock's update dot: an update is on offer and a live GPS fix shows the
     // vehicle parked (fail-closed; see VehicleMotion). The motion is judged as
     // each GPS fix or trip update arrives, never as other cards update, and a
@@ -236,12 +243,19 @@ internal class HomeViewModel(
             }
 
             HomeAction.PlayDefaultMusic -> {
-                // Best-effort resume first, then unconditionally launch the
-                // default music app: there is no callback confirming whether the
-                // media key actually resumed a session, so the launch fallback
-                // always fires too, guaranteeing the tap visibly responds.
-                resumeLastMusicSession()
-                mutableEvents.tryEmit(HomeEvent.LaunchAppCategory(Intent.CATEGORY_APP_MUSIC))
+                val preferred = musicApp.value.packageName
+                if (preferred != null) {
+                    // A named app (Spotify, Apple Music): the host sends PLAY
+                    // straight to it and opens it only if nothing starts.
+                    mutableEvents.tryEmit(HomeEvent.ResumeMusicApp(preferred))
+                } else {
+                    // Best-effort resume first, then unconditionally launch the
+                    // default music app: there is no callback confirming whether the
+                    // media key actually resumed a session, so the launch fallback
+                    // always fires too, guaranteeing the tap visibly responds.
+                    resumeLastMusicSession()
+                    mutableEvents.tryEmit(HomeEvent.LaunchAppCategory(Intent.CATEGORY_APP_MUSIC))
+                }
             }
 
             HomeAction.OpenBrowser -> {
@@ -410,6 +424,10 @@ internal class HomeViewModelFactory(
                     .map { it.musicSpectrum }
                     .distinctUntilChanged(),
             spectrumBandsFor = audioSpectrum::bandsFlow,
+            musicAppFlow =
+                displayPreferences.settings
+                    .map { it.musicApp }
+                    .distinctUntilChanged(),
         ) as T
     }
 }

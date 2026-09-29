@@ -33,6 +33,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import io.github.seijikohara.femto.R
 import io.github.seijikohara.femto.data.calendar.CalendarInfo
+import io.github.seijikohara.femto.data.display.MusicAppSetting
 import io.github.seijikohara.femto.ui.settings.SettingsAction
 import io.github.seijikohara.femto.ui.settings.SettingsUiState
 import io.github.seijikohara.femto.ui.theme.FemtoDimens
@@ -75,6 +76,17 @@ internal fun PanelsSection(
         title = stringResource(R.string.settings_group_panel_music),
         checked = uiState.showMusic,
         onCheckedChange = { onAction(SettingsAction.SetShowMusic(it)) },
+    )
+    ChoiceRow(
+        title = stringResource(R.string.settings_music_app),
+        options =
+            listOf(
+                MusicAppSetting.AUTO to stringResource(R.string.settings_music_app_auto),
+                MusicAppSetting.SPOTIFY to stringResource(R.string.settings_music_app_spotify),
+                MusicAppSetting.APPLE_MUSIC to stringResource(R.string.settings_music_app_apple_music),
+            ),
+        selected = uiState.musicApp,
+        onSelect = { onAction(SettingsAction.SetMusicApp(it)) },
     )
     SwitchRow(
         title = stringResource(R.string.settings_group_panel_music_spectrum),

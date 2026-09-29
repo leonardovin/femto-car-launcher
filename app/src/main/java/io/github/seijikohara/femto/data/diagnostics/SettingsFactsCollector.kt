@@ -75,6 +75,7 @@ internal fun displaySettingsFacts(display: DisplaySettings): List<DiagnosticFact
             "${display.showCalendar} / ${display.showWeather} / ${display.showMusic}",
         ),
         entry("Music spectrum", "${display.musicSpectrum}"),
+        entry("Music app", display.musicApp.name),
         entry("Music album / art", "${display.musicShowAlbum} / ${display.musicShowArt}"),
         entry("Google Maps rendering", display.googleMapsRendering.name),
         entry("Google Maps type", display.googleMapsMapType.name),

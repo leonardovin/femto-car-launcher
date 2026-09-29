@@ -5,6 +5,7 @@ import android.content.Intent
 import android.location.Location
 import android.location.LocationManager
 import app.cash.turbine.test
+import io.github.seijikohara.femto.data.display.MusicAppSetting
 import io.github.seijikohara.femto.data.dock.DockNavId
 import io.github.seijikohara.femto.data.dock.DockStatusId
 import io.github.seijikohara.femto.data.location.MIN_MOVING_SPEED_MS
@@ -428,6 +429,21 @@ class HomeViewModelTest {
         }
 
     @Test
+    fun `onAction PlayDefaultMusic resumes a named music app through ResumeMusicApp`() =
+        runTest {
+            var resumeCount = 0
+            val viewModel =
+                stubViewModel(resumeLastMusicSession = { resumeCount++ }, musicApp = MusicAppSetting.SPOTIFY)
+            viewModel.events.test {
+                viewModel.onAction(HomeAction.PlayDefaultMusic)
+                assertEquals(HomeEvent.ResumeMusicApp("com.spotify.music"), awaitItem())
+                cancelAndIgnoreRemainingEvents()
+            }
+            // The named app gets its own PLAY; the generic media key stays unused.
+            assertEquals(0, resumeCount)
+        }
+
+    @Test
     fun `audioSpectrum emits bands while the spectrum is enabled and music is playing`() =
         runTest {
             val bands = FloatArray(SPECTRUM_BAND_COUNT) { 0.5f }
@@ -647,6 +663,7 @@ class HomeViewModelTest {
         resumeLastMusicSession: () -> Unit = {},
         resetTrip: () -> Unit = {},
         resolveMusicSourceComponent: (String) -> ComponentName? = { null },
+        musicApp: MusicAppSetting = MusicAppSetting.AUTO,
     ): HomeViewModel =
         HomeViewModel(
             locationFlow = emptyFlow(),
@@ -660,6 +677,7 @@ class HomeViewModelTest {
             resumeLastMusicSession = resumeLastMusicSession,
             resetTrip = resetTrip,
             resolveMusicSourceComponent = resolveMusicSourceComponent,
+            musicAppFlow = flowOf(musicApp),
         )
 
     private companion object {

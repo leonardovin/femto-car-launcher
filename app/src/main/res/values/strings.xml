@@ -11,6 +11,10 @@
     <string name="settings_navigation_app_waze">Waze</string>
     <string name="settings_navigation_app_system">System default</string>
     <string name="nav_climate">Climate</string>
+    <string name="settings_music_app">Music app</string>
+    <string name="settings_music_app_auto">Automatic (last player)</string>
+    <string name="settings_music_app_spotify">Spotify</string>
+    <string name="settings_music_app_apple_music">Apple Music</string>
     <string name="vehicle_panel_title">Climate &amp; vehicle</string>
     <string name="vehicle_open_climate_app">Open the climate app</string>
     <string name="vehicle_driver">Driver</string>

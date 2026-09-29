@@ -25,7 +25,7 @@ screen *and* the overlay bottom bar. Constraints of the target unit:
 | 4 | Google Maps via the installed app (no API key, no billing) | done (underlay mode: later) |
 | 5 | Shizuku integration layer inside the launcher | done |
 | 6 | Port the bottom-bar vehicle controls into the dock | done (needs on-car check) |
-| 7 | Spotify / Apple Music first-class integration | planned |
+| 7 | Spotify / Apple Music first-class integration | done (needs on-car check) |
 | 8 | Car install path + on-car validation | planned |
 
 Verified so far on an API 28 x86_64 emulator (stock WebView 69, GLES 3): dashboard, OSM map with

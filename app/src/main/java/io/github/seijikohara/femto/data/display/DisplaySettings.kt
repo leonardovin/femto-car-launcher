@@ -58,6 +58,21 @@ internal enum class FullscreenSetting { OFF, ON }
 internal enum class AssistantLaunchSetting { SYSTEM, IN_APP }
 
 /**
+ * The music app the idle music card resumes (Android 9 fork). [AUTO] keeps the
+ * upstream behaviour (resume the last session, open the default music app); a
+ * named app gets a PLAY media button sent straight to it, so it resumes in the
+ * background, and is opened only when no session starts. Any MediaSession app
+ * still shows on the card whichever is chosen.
+ */
+internal enum class MusicAppSetting(
+    val packageName: String?,
+) {
+    AUTO(null),
+    SPOTIFY("com.spotify.music"),
+    APPLE_MUSIC("com.apple.android.music"),
+}
+
+/**
  * Which navigation app the dock's Navigation button hands off to, and whose
  * turn-by-turn notification the dashboard's guidance card mirrors (Android 9
  * fork: Google Maps is used through its app, never a billed API). [SYSTEM]
@@ -268,6 +283,7 @@ internal data class DisplaySettings(
     // and its Visualizer capture sits behind the RECORD_AUDIO runtime grant,
     // so a fresh install must never prompt for it.
     val musicSpectrum: Boolean,
+    val musicApp: MusicAppSetting,
     // Whether the music card and the full-screen player show the album name.
     // Defaults true (the album line is shown); users who find it redundant with
     // the title can hide it. See musicShowArt for the cover-art counterpart.
@@ -351,6 +367,7 @@ internal data class DisplaySettings(
                 showWeather = true,
                 showMusic = true,
                 musicSpectrum = false,
+                musicApp = MusicAppSetting.AUTO,
                 musicShowAlbum = true,
                 musicShowArt = true,
                 mapBackend = MapBackend.OSM,

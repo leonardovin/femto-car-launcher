@@ -93,6 +93,7 @@ internal enum class SettingsSectionId(
             DisplayPreferences.SHOW_WEATHER_KEY,
             DisplayPreferences.SHOW_MUSIC_KEY,
             DisplayPreferences.MUSIC_SPECTRUM_KEY,
+            DisplayPreferences.MUSIC_APP_KEY,
             DisplayPreferences.MUSIC_SHOW_ALBUM_KEY,
             DisplayPreferences.MUSIC_SHOW_ART_KEY,
         ),

@@ -19,6 +19,7 @@ import io.github.seijikohara.femto.data.display.MapBackend
 import io.github.seijikohara.femto.data.display.MapColorScheme
 import io.github.seijikohara.femto.data.display.MapStyleSetting
 import io.github.seijikohara.femto.data.display.MotionTier
+import io.github.seijikohara.femto.data.display.MusicAppSetting
 import io.github.seijikohara.femto.data.display.NavigationAppSetting
 import io.github.seijikohara.femto.data.display.OrientationSetting
 import io.github.seijikohara.femto.data.display.SpeedUnitSetting
@@ -129,6 +130,8 @@ internal class FakeDisplaySettingsStore(
     override suspend fun setShowMusic(value: Boolean) = state.update { it.copy(showMusic = value) }
 
     override suspend fun setMusicSpectrum(value: Boolean) = state.update { it.copy(musicSpectrum = value) }
+
+    override suspend fun setMusicApp(value: MusicAppSetting) = state.update { it.copy(musicApp = value) }
 
     override suspend fun setMusicShowAlbum(value: Boolean) = state.update { it.copy(musicShowAlbum = value) }
 
@@ -319,6 +322,10 @@ internal class FakeDisplaySettingsStore(
 
             DisplayPreferences.MUSIC_SPECTRUM_KEY -> {
                 copy(musicSpectrum = default.musicSpectrum)
+            }
+
+            DisplayPreferences.MUSIC_APP_KEY -> {
+                copy(musicApp = default.musicApp)
             }
 
             DisplayPreferences.MUSIC_SHOW_ALBUM_KEY -> {

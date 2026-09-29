@@ -3,13 +3,17 @@ package io.github.seijikohara.femto
 import android.Manifest
 import android.app.SearchManager
 import android.content.ActivityNotFoundException
+import android.content.ComponentName
 import android.content.Intent
 import android.content.pm.ActivityInfo
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
+import android.os.SystemClock
 import android.provider.Settings
 import android.text.format.DateFormat
 import android.util.Log
+import android.view.KeyEvent
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -24,6 +28,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
+import androidx.core.content.getSystemService
 import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
@@ -79,6 +84,7 @@ import io.github.seijikohara.femto.ui.settings.SettingsDocument
 import io.github.seijikohara.femto.ui.settings.SettingsSheet
 import io.github.seijikohara.femto.ui.theme.FemtoTheme
 import io.github.seijikohara.femto.ui.theme.buildFontFamily
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -463,6 +469,10 @@ class MainActivity : ComponentActivity() {
                 openNavigation(event.guidance)
             }
 
+            is HomeEvent.ResumeMusicApp -> {
+                resumeMusicApp(event.packageName)
+            }
+
             is HomeEvent.AdjustMapZoom -> {
                 // Atomic in the store: rapid taps must not recompute from the
                 // composition's display snapshot and lose steps.
@@ -622,6 +632,47 @@ class MainActivity : ComponentActivity() {
         setting.packageName?.takeIf { packageName ->
             runCatching { packageManager.getApplicationInfo(packageName, 0).enabled }.getOrDefault(false)
         }
+
+    // PLAY to the app's media button receiver resumes its last queue without
+    // bringing it over the dashboard (Spotify and Apple Music both register one).
+    // Audio that has not started after the grace period means it could not
+    // resume headless (first run, signed out), so the app itself opens.
+    private fun resumeMusicApp(packageName: String) {
+        val receivers =
+            runCatching {
+                @Suppress("DEPRECATION")
+                packageManager.queryBroadcastReceivers(Intent(Intent.ACTION_MEDIA_BUTTON).setPackage(packageName), 0)
+            }.getOrDefault(emptyList())
+        val openApp = {
+            packageManager
+                .getLaunchIntentForPackage(packageName)
+                ?.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                ?.let(::tryStartActivity)
+                ?: launchAppCategory(Intent.CATEGORY_APP_MUSIC)
+        }
+        if (receivers.isEmpty()) {
+            openApp()
+            return
+        }
+        val eventTime = SystemClock.uptimeMillis()
+        receivers.forEach { receiver ->
+            val component = ComponentName(receiver.activityInfo.packageName, receiver.activityInfo.name)
+            listOf(KeyEvent.ACTION_DOWN, KeyEvent.ACTION_UP).forEach { action ->
+                sendBroadcast(
+                    Intent(Intent.ACTION_MEDIA_BUTTON)
+                        .setComponent(component)
+                        .putExtra(
+                            Intent.EXTRA_KEY_EVENT,
+                            KeyEvent(eventTime, eventTime, action, KeyEvent.KEYCODE_MEDIA_PLAY, 0),
+                        ),
+                )
+            }
+        }
+        lifecycleScope.launch {
+            delay(MUSIC_RESUME_GRACE_MS)
+            if (getSystemService<AudioManager>()?.isMusicActive != true) openApp()
+        }
+    }
 
     // The guidance notification's content intent reopens the live route screen;
     // a cancelled intent (the route just ended) falls back to the app itself.
@@ -789,6 +840,9 @@ private const val TAG = "MainActivity"
 private const val FONT_SPLASH_TIMEOUT_MS = 1_500L
 
 private const val QEMU_PROPERTY = "ro.kernel.qemu"
+
+// How long a headless resume may take before the music app is opened instead.
+private const val MUSIC_RESUME_GRACE_MS = 3_000L
 
 // Street-level zoom for the geo: handoff — close enough to read nearby roads
 // without dropping below neighbourhood context.

@@ -147,6 +147,7 @@ internal class SettingsViewModel(
                 showWeather = display.showWeather,
                 showMusic = display.showMusic,
                 musicSpectrum = display.musicSpectrum,
+                musicApp = display.musicApp,
                 musicShowAlbum = display.musicShowAlbum,
                 musicShowArt = display.musicShowArt,
                 mapBackend = display.mapBackend,
@@ -282,6 +283,10 @@ internal class SettingsViewModel(
 
                 is SettingsAction.SetNavigationApp -> {
                     displayPreferences.setNavigationApp(action.value)
+                }
+
+                is SettingsAction.SetMusicApp -> {
+                    displayPreferences.setMusicApp(action.value)
                 }
 
                 is SettingsAction.SetMapStyle -> {

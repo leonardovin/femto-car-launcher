@@ -16,6 +16,7 @@ import io.github.seijikohara.femto.data.display.MapBackend
 import io.github.seijikohara.femto.data.display.MapColorScheme
 import io.github.seijikohara.femto.data.display.MapStyleSetting
 import io.github.seijikohara.femto.data.display.MotionTier
+import io.github.seijikohara.femto.data.display.MusicAppSetting
 import io.github.seijikohara.femto.data.display.NavigationAppSetting
 import io.github.seijikohara.femto.data.display.OrientationSetting
 import io.github.seijikohara.femto.data.display.SettingsSectionId
@@ -81,6 +82,7 @@ internal data class SettingsUiState(
     val showWeather: Boolean,
     val showMusic: Boolean,
     val musicSpectrum: Boolean,
+    val musicApp: MusicAppSetting,
     val musicShowAlbum: Boolean,
     val musicShowArt: Boolean,
     // The chosen Google Fonts families per slot; null means the system font.
@@ -156,6 +158,7 @@ internal data class SettingsUiState(
                 showWeather = DisplaySettings.Default.showWeather,
                 showMusic = DisplaySettings.Default.showMusic,
                 musicSpectrum = DisplaySettings.Default.musicSpectrum,
+                musicApp = DisplaySettings.Default.musicApp,
                 musicShowAlbum = DisplaySettings.Default.musicShowAlbum,
                 musicShowArt = DisplaySettings.Default.musicShowArt,
                 latinFont = null,
@@ -252,6 +255,10 @@ internal sealed interface SettingsAction {
 
     data class SetNavigationApp(
         val value: NavigationAppSetting,
+    ) : SettingsAction
+
+    data class SetMusicApp(
+        val value: MusicAppSetting,
     ) : SettingsAction
 
     data class SetMapStyle(

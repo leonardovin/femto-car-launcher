@@ -90,6 +90,13 @@
         <intent>
             <action android:name="android.intent.action.ASSIST" />
         </intent>
+        <!--
+            Android 9 fork: resume the preferred music app through its media
+            button receiver (Settings > Panels > Music app).
+        -->
+        <intent>
+            <action android:name="android.intent.action.MEDIA_BUTTON" />
+        </intent>
     </queries>
 
     <application
