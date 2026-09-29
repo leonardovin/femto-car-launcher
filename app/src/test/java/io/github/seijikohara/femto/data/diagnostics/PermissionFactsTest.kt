@@ -24,6 +24,19 @@ class PermissionFactsTest {
     }
 
     @Test
+    fun `permissionRowsFrom leaves out permissions the platform does not define`() {
+        val rows =
+            permissionRowsFrom(
+                requested = arrayOf("android.permission.INTERNET", "android.permission.POST_NOTIFICATIONS"),
+                flags = intArrayOf(PackageInfo.REQUESTED_PERMISSION_GRANTED, 0),
+                dangerous = emptySet(),
+                defined = { it != "android.permission.POST_NOTIFICATIONS" },
+            )
+
+        assertEquals(listOf(PermissionRow("INTERNET", granted = true, dangerous = false)), rows)
+    }
+
+    @Test
     fun `permissionRowsFrom sorts dangerous permissions before normal ones, alphabetically within each group`() {
         val rows =
             permissionRowsFrom(

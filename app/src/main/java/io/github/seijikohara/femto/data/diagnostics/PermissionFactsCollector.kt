@@ -25,15 +25,19 @@ internal fun permissionRowsFrom(
     requested: Array<String>?,
     flags: IntArray?,
     dangerous: Set<String>,
+    // Android 9 fork: a permission the running platform does not define (e.g.
+    // POST_NOTIFICATIONS below API 33) can never be granted and does not apply,
+    // so it is left out rather than listed as "denied".
+    defined: (String) -> Boolean = { true },
 ): List<PermissionRow> =
     requested
         .orEmpty()
-        .mapIndexed { index, permission ->
+        .mapIndexedNotNull { index, permission ->
             PermissionRow(
                 name = permission.substringAfterLast('.'),
                 granted = (flags?.getOrNull(index) ?: 0) and PackageInfo.REQUESTED_PERMISSION_GRANTED != 0,
                 dangerous = permission in dangerous,
-            )
+            ).takeIf { defined(permission) }
         }.sortedWith(compareByDescending<PermissionRow> { it.dangerous }.thenBy { it.name })
 
 /**
@@ -62,7 +66,10 @@ internal class PermissionFactsCollector(
             val dangerous = requested.orEmpty().filter { it.isDangerousPermission(packageManager) }.toSet()
 
             SectionPayload.PermissionTable(
-                rows = permissionRowsFrom(requested, packageInfo.requestedPermissionsFlags, dangerous),
+                rows =
+                    permissionRowsFrom(requested, packageInfo.requestedPermissionsFlags, dangerous) { permission ->
+                        runCatching { packageManager.getPermissionInfo(permission, 0) }.isSuccess
+                    },
                 extras =
                     listOf(
                         notificationListenerFact(),

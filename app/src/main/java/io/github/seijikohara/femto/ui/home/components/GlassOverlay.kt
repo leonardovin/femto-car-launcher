@@ -59,9 +59,16 @@ internal fun Modifier.glassEffect(
     return hazeEffect(state = hazeState) {
         backgroundColor = surfaceColor
         tints = listOf(HazeTint(surfaceColor.copy(alpha = tintAlpha)))
+        // Android 9 fork: below API 31 there is no blur, and the thin tint alone
+        // leaves card text fighting the map; the fallback frosts it instead.
+        fallbackTint = HazeTint(surfaceColor.copy(alpha = maxOf(tintAlpha, NO_BLUR_MIN_TINT_ALPHA)))
         this.blurRadius = blurRadius
     }
 }
+
+// Tint floor for devices without blur (API < 31), where the tint is the whole
+// frosting.
+private const val NO_BLUR_MIN_TINT_ALPHA = 0.92f
 
 // Hairline width for the optional glass outline.
 private val GlassBorderWidth = 1.dp
