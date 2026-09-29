@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.hardware.display.DisplayManager
 import android.os.BatteryManager
+import android.os.Build
 import android.os.Debug
 import android.os.PowerManager
 import android.os.Process
@@ -167,13 +168,18 @@ internal class PerformanceFactsCollector(
             .coerceAtLeast(MIN_DELAYED_THRESHOLD_MS)
 
     private fun thermalFact(power: PowerManager?): DiagnosticFact {
-        val thermal = power?.currentThermalStatus.toThermalLevel()
+        // Thermal status is API 29+ and headroom API 30+; Android 9 reports neither.
+        val thermal =
+            (if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) power?.currentThermalStatus else null)
+                .toThermalLevel()
         // Locale.ROOT keeps the decimal point: the report's grep-stable
         // wording contract must hold on comma-decimal devices too.
         val headroom =
-            power
-                ?.getThermalHeadroom(HEADROOM_FORECAST_SECONDS)
-                ?.takeIf { it.isFinite() }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                power?.getThermalHeadroom(HEADROOM_FORECAST_SECONDS)
+            } else {
+                null
+            }?.takeIf { it.isFinite() }
                 ?.let { " (headroom %.2f)".format(Locale.ROOT, it) }
                 .orEmpty()
         return DiagnosticFact(

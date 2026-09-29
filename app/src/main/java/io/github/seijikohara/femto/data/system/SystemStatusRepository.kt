@@ -18,7 +18,12 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.net.wifi.WifiManager
 import android.os.BatteryManager
+import android.os.Build
+import android.os.Handler
+import android.os.Looper
+import android.telephony.PhoneStateListener
 import android.telephony.SignalStrength
 import android.telephony.TelephonyCallback
 import android.telephony.TelephonyManager
@@ -49,6 +54,7 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.merge
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.transformLatest
+import kotlinx.coroutines.withContext
 
 private const val TAG = "SystemStatusRepo"
 
@@ -218,7 +224,15 @@ internal class SystemStatusRepository(
     // an OEM-configurable ceiling through the Wi-Fi service, which neither pins
     // the dock's fixed 0..MAX_SIGNAL_LEVEL range nor runs under Robolectric.
     private fun wifiLevelFrom(caps: NetworkCapabilities): Int {
-        val rssi = caps.signalStrength
+        // getSignalStrength() is API 29+; Android 9 reads the connected RSSI
+        // from WifiManager instead.
+        val rssi =
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                caps.signalStrength
+            } else {
+                @Suppress("DEPRECATION")
+                context.applicationContext.getSystemService<WifiManager>()?.connectionInfo?.rssi ?: Int.MIN_VALUE
+            }
         if (rssi == Int.MIN_VALUE) return 0
         return when {
             rssi <= WIFI_MIN_RSSI_DBM -> 0
@@ -306,12 +320,32 @@ internal class SystemStatusRepository(
                 awaitClose { }
                 return@callbackFlow
             }
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+                // TelephonyCallback is API 31+; Android 9 uses the legacy
+                // PhoneStateListener, which binds to the constructing thread's
+                // Looper, so it is built on the main thread.
+                @Suppress("DEPRECATION")
+                val listener =
+                    withContext(Dispatchers.Main) {
+                        object : PhoneStateListener() {
+                            @Deprecated("Deprecated in Java")
+                            override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
+                                trySend(signalStrength.level.coerceIn(0, MAX_SIGNAL_LEVEL))
+                            }
+                        }
+                    }
+                @Suppress("DEPRECATION")
+                tm.listen(listener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS)
+                @Suppress("DEPRECATION")
+                awaitClose { tm.listen(listener, PhoneStateListener.LISTEN_NONE) }
+                return@callbackFlow
+            }
             val callback = object : TelephonyCallback(), TelephonyCallback.SignalStrengthsListener {
                 override fun onSignalStrengthsChanged(signalStrength: SignalStrength) {
                     trySend(signalStrength.level.coerceIn(0, MAX_SIGNAL_LEVEL))
                 }
             }
-            tm.registerTelephonyCallback(context.mainExecutor, callback)
+            tm.registerTelephonyCallback(ContextCompat.getMainExecutor(context), callback)
             awaitClose { tm.unregisterTelephonyCallback(callback) }
         }
 
@@ -385,7 +419,14 @@ internal class SystemStatusRepository(
             // Registration refusal is reported via the Boolean, not an exception,
             // so no upstream catch ever sees it — the dock would read "searching"
             // forever despite a working fix. Some head-unit GNSS HALs do refuse.
-            if (!lm.registerGnssStatusCallback(context.mainExecutor, callback)) {
+            val registered =
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                    lm.registerGnssStatusCallback(ContextCompat.getMainExecutor(context), callback)
+                } else {
+                    @Suppress("DEPRECATION")
+                    lm.registerGnssStatusCallback(callback, Handler(Looper.getMainLooper()))
+                }
+            if (!registered) {
                 Log.w(TAG, "GnssStatus callback registration refused; satellite count stays 0")
             }
             awaitClose { lm.unregisterGnssStatusCallback(callback) }

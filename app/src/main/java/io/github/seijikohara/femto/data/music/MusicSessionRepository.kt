@@ -522,7 +522,21 @@ internal class MusicSessionRepository(
  * check (which excludes STATE_PAUSED) is not enough here.
  */
 internal fun PlaybackState?.isPlayingOrPaused(): Boolean =
-    this != null && (isActive() || state == PlaybackState.STATE_PAUSED)
+    this != null && (state in ACTIVE_PLAYBACK_STATES || state == PlaybackState.STATE_PAUSED)
+
+// The states PlaybackState.isActive() (API 31+) treats as active, spelled out
+// so the check also runs on Android 9.
+private val ACTIVE_PLAYBACK_STATES =
+    setOf(
+        PlaybackState.STATE_FAST_FORWARDING,
+        PlaybackState.STATE_REWINDING,
+        PlaybackState.STATE_SKIPPING_TO_PREVIOUS,
+        PlaybackState.STATE_SKIPPING_TO_NEXT,
+        PlaybackState.STATE_SKIPPING_TO_QUEUE_ITEM,
+        PlaybackState.STATE_BUFFERING,
+        PlaybackState.STATE_CONNECTING,
+        PlaybackState.STATE_PLAYING,
+    )
 
 /**
  * Return `true` when the state is PLAYING. The other half of the pair the card

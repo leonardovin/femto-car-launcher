@@ -3,6 +3,7 @@ package io.github.seijikohara.femto.data.fonts
 import android.graphics.Paint
 import android.graphics.Typeface
 import android.graphics.fonts.SystemFonts
+import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -76,14 +77,26 @@ internal fun interface SystemFontFileSource {
  * buffer-only), so entries with no readable file are dropped rather than
  * failing the whole scan.
  */
+private val FONT_FILE_EXTENSIONS = setOf("ttf", "otf", "ttc")
+
 internal object PlatformSystemFontFileSource : SystemFontFileSource {
     override fun files(): List<File> =
         runCatching {
-            SystemFonts
-                .getAvailableFonts()
-                .mapNotNull { font -> font.file }
-                .filter { it.isFile }
-                .distinct()
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                SystemFonts
+                    .getAvailableFonts()
+                    .mapNotNull { font -> font.file }
+                    .filter { it.isFile }
+                    .distinct()
+            } else {
+                // SystemFonts is API 29+; Android 9 lists the platform font
+                // directory directly.
+                File("/system/fonts")
+                    .listFiles()
+                    .orEmpty()
+                    .filter { it.isFile && it.extension.lowercase() in FONT_FILE_EXTENSIONS }
+                    .sortedBy { it.name }
+            }
         }.onFailure { Log.w(TAG, "system font enumeration failed", it) }
             .getOrDefault(emptyList())
 }

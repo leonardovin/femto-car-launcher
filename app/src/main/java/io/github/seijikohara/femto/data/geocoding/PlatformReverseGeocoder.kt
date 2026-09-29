@@ -3,6 +3,7 @@ package io.github.seijikohara.femto.data.geocoding
 import android.content.Context
 import android.location.Address
 import android.location.Geocoder
+import android.os.Build
 import android.util.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,14 @@ internal class PlatformReverseGeocoder(
             // construction) governs the returned address language.
             val geocoder = Geocoder(appContext, localeProvider())
             runCatching {
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+                    // Below API 33 only the blocking overload exists; this
+                    // already runs on the IO dispatcher.
+                    @Suppress("DEPRECATION")
+                    return@runCatching geocoder.getFromLocation(latitude, longitude, 1)
+                        ?.firstOrNull()
+                        ?.toShortAddressOrNull()
+                }
                 suspendCancellableCoroutine<Address?> { continuation ->
                     // The minSdk-33 async listener variant; the legacy blocking
                     // overload is deprecated on API 33+.

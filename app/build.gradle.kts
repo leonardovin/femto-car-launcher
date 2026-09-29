@@ -134,7 +134,7 @@ android {
 
     defaultConfig {
         applicationId = "io.github.seijikohara.femto"
-        minSdk = 33
+        minSdk = 28
         targetSdk = 36
         // CI injects versionCode/versionName: .github/actions/app-version
         // computes the date version for both channels, and the nightly and

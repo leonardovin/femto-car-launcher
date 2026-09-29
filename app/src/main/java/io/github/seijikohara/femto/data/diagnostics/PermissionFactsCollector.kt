@@ -56,10 +56,8 @@ internal class PermissionFactsCollector(
         withContext(Dispatchers.IO) {
             val packageManager = context.packageManager
             val packageInfo =
-                packageManager.getPackageInfo(
-                    context.packageName,
-                    PackageManager.PackageInfoFlags.of(PackageManager.GET_PERMISSIONS.toLong()),
-                )
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(context.packageName, PackageManager.GET_PERMISSIONS)
             val requested = packageInfo.requestedPermissions
             val dangerous = requested.orEmpty().filter { it.isDangerousPermission(packageManager) }.toSet()
 
@@ -101,11 +99,12 @@ internal class PermissionFactsCollector(
     // unit where holding it is the whole point of the app.
     private fun homeRoleFact(): DiagnosticFact {
         val held = context.holdsHomeRole()
+        @Suppress("DEPRECATION")
         val defaultPackage =
             context.packageManager
                 .resolveActivity(
                     Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME),
-                    PackageManager.ResolveInfoFlags.of(PackageManager.MATCH_DEFAULT_ONLY.toLong()),
+                    PackageManager.MATCH_DEFAULT_ONLY,
                 )?.activityInfo
                 ?.packageName
         val heldLabel = if (held) "held" else "not held"

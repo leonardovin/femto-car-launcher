@@ -2,6 +2,7 @@ package io.github.seijikohara.femto.data.update
 
 import android.content.Context
 import android.content.pm.PackageInstaller
+import android.os.Build
 import android.util.Log
 import io.github.seijikohara.femto.BuildConfig
 import kotlinx.coroutines.CoroutineDispatcher
@@ -143,7 +144,7 @@ internal class PlatformInstallSessions(
             PackageInstaller.SessionParams(params.mode).apply {
                 setAppPackageName(params.appPackageName)
                 setSize(params.sizeBytes)
-                setPackageSource(params.packageSource)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) setPackageSource(params.packageSource)
             },
         )
 

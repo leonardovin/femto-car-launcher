@@ -41,7 +41,9 @@ internal class DeviceFactsCollector(
                             FactValue.Text("${Build.HARDWARE} / ${Build.BRAND}"),
                         ),
                     )
-                    add(DiagnosticFact("SoC", FactValue.Text("${Build.SOC_MANUFACTURER} ${Build.SOC_MODEL}")))
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        add(DiagnosticFact("SoC", FactValue.Text("${Build.SOC_MANUFACTURER} ${Build.SOC_MODEL}")))
+                    }
                     add(DiagnosticFact("Security patch", FactValue.Text(Build.VERSION.SECURITY_PATCH)))
                     add(DiagnosticFact("Incremental", FactValue.Text(Build.VERSION.INCREMENTAL)))
                     add(DiagnosticFact("ABIs", FactValue.Text(Build.SUPPORTED_ABIS.joinToString())))
@@ -81,8 +83,12 @@ internal class DeviceFactsCollector(
     }
 
     private fun performanceClassLabel(): String =
-        Build.VERSION.MEDIA_PERFORMANCE_CLASS.let { performanceClass ->
-            if (performanceClass == 0) "0 (none)" else performanceClass.toString()
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            "n/a (API < 31)"
+        } else {
+            Build.VERSION.MEDIA_PERFORMANCE_CLASS.let { performanceClass ->
+                if (performanceClass == 0) "0 (none)" else performanceClass.toString()
+            }
         }
 
     private fun deviceFeaturesLabel(): String {

@@ -19,7 +19,6 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import java.time.Instant
 import java.time.LocalDate
-import java.time.LocalTime
 import java.time.ZoneId
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
@@ -265,8 +264,8 @@ internal class CalendarRepository(
                         // derived from the system zone. All-day END is the
                         // next-midnight boundary, not a meaningful clock time, so it
                         // goes the same way.
-                        val startTime = if (allDay) null else LocalTime.ofInstant(Instant.ofEpochMilli(startMs), zone)
-                        val endTime = if (allDay) null else LocalTime.ofInstant(Instant.ofEpochMilli(endMs), zone)
+                        val startTime = if (allDay) null else Instant.ofEpochMilli(startMs).atZone(zone).toLocalTime()
+                        val endTime = if (allDay) null else Instant.ofEpochMilli(endMs).atZone(zone).toLocalTime()
                         covered.forEach { date ->
                             byDay.getOrPut(date) { mutableListOf() } +=
                                 EventItem(

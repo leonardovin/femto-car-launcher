@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.os.Build
 import android.util.Log
 import androidx.annotation.RequiresPermission
 import androidx.core.app.NotificationChannelCompat
@@ -74,7 +75,8 @@ internal class PackageReplacedReceiver : BroadcastReceiver() {
     ) {
         if (intent.action != Intent.ACTION_MY_PACKAGE_REPLACED) return
         val mayNotify =
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+                ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
                 PackageManager.PERMISSION_GRANTED
         val after = afterUpdateAction(context.holdsHomeRole(), mayNotify)
         if (after.notify) notifyUpdated(context)

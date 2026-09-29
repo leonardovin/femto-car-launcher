@@ -2,12 +2,16 @@ package io.github.seijikohara.femto.data.diagnostics
 
 import android.content.Context
 import android.content.res.Configuration
+import android.graphics.Point
+import android.graphics.Rect
 import android.hardware.display.DisplayManager
+import android.os.Build
 import android.provider.Settings
 import android.util.DisplayMetrics
 import android.view.Display
 import android.view.WindowInsets
 import android.view.WindowManager
+import androidx.annotation.RequiresApi
 import androidx.core.content.getSystemService
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -124,8 +128,19 @@ internal class DisplayFactsCollector(
             // WindowManager.currentWindowMetrics/maximumWindowMetrics.
             val displayContext = context.createDisplayContext(display)
             val windowManager = displayContext.getSystemService<WindowManager>()!!
-            val current = windowManager.currentWindowMetrics
-            val maximum = windowManager.maximumWindowMetrics
+            // WindowMetrics is API 30+; Android 9 reads the same two sizes from
+            // the display's app area and its real (maximum) size.
+            val currentBounds: Rect
+            val maximumBounds: Rect
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                currentBounds = windowManager.currentWindowMetrics.bounds
+                maximumBounds = windowManager.maximumWindowMetrics.bounds
+            } else {
+                @Suppress("DEPRECATION")
+                currentBounds = Point().also { display.getSize(it) }.let { Rect(0, 0, it.x, it.y) }
+                @Suppress("DEPRECATION")
+                maximumBounds = Point().also { display.getRealSize(it) }.let { Rect(0, 0, it.x, it.y) }
+            }
             val metrics = displayContext.resources.displayMetrics
             val configuration = displayContext.resources.configuration
 
@@ -133,15 +148,15 @@ internal class DisplayFactsCollector(
                 buildList {
                     addAll(
                         displayGeometryFacts(
-                            boundsPx = "${current.bounds.width()}x${current.bounds.height()}",
-                            maxBoundsPx = "${maximum.bounds.width()}x${maximum.bounds.height()}",
+                            boundsPx = "${currentBounds.width()}x${currentBounds.height()}",
+                            maxBoundsPx = "${maximumBounds.width()}x${maximumBounds.height()}",
                             densityDpi = metrics.densityDpi,
                             stableDensityDpi = DisplayMetrics.DENSITY_DEVICE_STABLE,
                             density = metrics.density,
                             xdpi = metrics.xdpi,
                             ydpi = metrics.ydpi,
-                            widthPx = maximum.bounds.width(),
-                            heightPx = maximum.bounds.height(),
+                            widthPx = maximumBounds.width(),
+                            heightPx = maximumBounds.height(),
                             screenWidthDp = configuration.screenWidthDp,
                             screenHeightDp = configuration.screenHeightDp,
                             smallestScreenWidthDp = configuration.smallestScreenWidthDp,
@@ -175,7 +190,9 @@ internal class DisplayFactsCollector(
                             FactValue.Text("${display.isHdr} / ${configuration.isScreenWideColorGamut}"),
                         ),
                     )
-                    add(cutoutInsetsFact(current.windowInsets))
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                        add(cutoutInsetsFact(windowManager.currentWindowMetrics.windowInsets))
+                    }
                     add(
                         DiagnosticFact(
                             "Displays",
@@ -194,6 +211,7 @@ internal class DisplayFactsCollector(
             )
         }
 
+    @RequiresApi(Build.VERSION_CODES.R)
     private fun cutoutInsetsFact(windowInsets: WindowInsets): DiagnosticFact {
         val statusBarInsets = windowInsets.getInsets(WindowInsets.Type.statusBars())
         val navBarInsets = windowInsets.getInsets(WindowInsets.Type.navigationBars())

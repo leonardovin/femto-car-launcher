@@ -136,7 +136,7 @@ internal class EnvironmentFactsCollector(
     private fun providersFact(locationManager: LocationManager): DiagnosticFact {
         val gps = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)
         val network =
-            locationManager.hasProvider(LocationManager.NETWORK_PROVIDER) &&
+            LocationManager.NETWORK_PROVIDER in locationManager.allProviders &&
                 locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER)
         return DiagnosticFact("Providers", FactValue.Text("gps=$gps, network=$network"))
     }

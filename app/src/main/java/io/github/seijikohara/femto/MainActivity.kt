@@ -5,7 +5,6 @@ import android.app.SearchManager
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import android.content.pm.ActivityInfo
-import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -25,7 +24,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.unit.dp
-import androidx.core.content.ContextCompat
 import androidx.core.net.toUri
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.WindowCompat
@@ -36,6 +34,7 @@ import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
 import io.github.seijikohara.femto.data.apps.AppsRepository
 import io.github.seijikohara.femto.data.common.hasBluetoothConnectPermission
+import io.github.seijikohara.femto.data.common.hasPostNotificationsPermission
 import io.github.seijikohara.femto.data.common.hasReadCalendarPermission
 import io.github.seijikohara.femto.data.common.hasReadPhoneStatePermission
 import io.github.seijikohara.femto.data.display.AssistantLaunchSetting
@@ -503,7 +502,8 @@ class MainActivity : ComponentActivity() {
      */
     private fun launchSystemAssistant(): Boolean =
         assistantIntent(AssistantOption.ASSISTANT).let { intent ->
-            packageManager.resolveActivity(intent, PackageManager.ResolveInfoFlags.of(0)) != null &&
+            @Suppress("DEPRECATION")
+            packageManager.resolveActivity(intent, 0) != null &&
                 tryStartActivity(intent)
         }
 
@@ -659,12 +659,10 @@ class MainActivity : ComponentActivity() {
 
     // The foreground service runs without it, but the ongoing trip notification
     // only shows once granted. Request at the opt-in point, never at startup.
-    // POST_NOTIFICATIONS is a runtime grant at the minSdk-33 floor, so no
-    // SDK_INT guard is needed.
+    // POST_NOTIFICATIONS is a runtime grant only on API 33+; the helper
+    // reports it granted below that.
     private fun ensurePostNotificationsPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) !=
-            PackageManager.PERMISSION_GRANTED
-        ) {
+        if (!hasPostNotificationsPermission()) {
             permissionsLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
         }
     }

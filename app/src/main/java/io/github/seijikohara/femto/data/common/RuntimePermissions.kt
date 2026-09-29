@@ -3,6 +3,7 @@ package io.github.seijikohara.femto.data.common
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
+import android.os.Build
 import androidx.core.content.ContextCompat
 
 /**
@@ -47,14 +48,28 @@ internal fun Context.hasRecordAudioPermission(): Boolean =
     ) == PackageManager.PERMISSION_GRANTED
 
 /**
- * `BLUETOOTH_CONNECT` is a runtime grant on Android 12+ (API 31); the app's
- * minSdk is 33, so it is always a runtime grant and never auto-granted.
+ * `BLUETOOTH_CONNECT` is a runtime grant on Android 12+ (API 31). Below that
+ * the connected-device APIs sit behind the install-time `BLUETOOTH`
+ * permission (declared with maxSdkVersion 30), so the check always passes.
  */
 internal fun Context.hasBluetoothConnectPermission(): Boolean =
-    ContextCompat.checkSelfPermission(
-        this,
-        Manifest.permission.BLUETOOTH_CONNECT,
-    ) == PackageManager.PERMISSION_GRANTED
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.BLUETOOTH_CONNECT,
+        ) == PackageManager.PERMISSION_GRANTED
+
+/**
+ * `POST_NOTIFICATIONS` is a runtime grant on Android 13+ (API 33); below that
+ * posting needs no permission (the user can still block notifications in
+ * system settings, which NotificationManagerCompat honours).
+ */
+internal fun Context.hasPostNotificationsPermission(): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(
+            this,
+            Manifest.permission.POST_NOTIFICATIONS,
+        ) == PackageManager.PERMISSION_GRANTED
 
 /**
  * The "Install unknown apps" access the in-app updater installs with. Unlike

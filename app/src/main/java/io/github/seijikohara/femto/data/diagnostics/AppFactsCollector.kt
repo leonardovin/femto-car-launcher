@@ -2,6 +2,7 @@ package io.github.seijikohara.femto.data.diagnostics
 
 import android.app.ActivityManager
 import android.app.ApplicationExitInfo
+import android.os.Build
 import android.content.Context
 import androidx.core.content.getSystemService
 import io.github.seijikohara.femto.BuildConfig
@@ -145,8 +146,14 @@ internal class AppFactsCollector(
                         DiagnosticFact(
                             "Installer",
                             FactValue.Text(
-                                packageManager.getInstallSourceInfo(context.packageName).installingPackageName
-                                    ?: "sideload/unknown",
+                                (
+                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                                        packageManager.getInstallSourceInfo(context.packageName).installingPackageName
+                                    } else {
+                                        @Suppress("DEPRECATION")
+                                        packageManager.getInstallerPackageName(context.packageName)
+                                    }
+                                ) ?: "sideload/unknown",
                             ),
                         ),
                     )
@@ -163,6 +170,12 @@ internal class AppFactsCollector(
 
     suspend fun crashHistory(): SectionPayload.Facts =
         withContext(Dispatchers.IO) {
+            // ApplicationExitInfo is API 30+; Android 9 keeps no exit history.
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                return@withContext SectionPayload.Facts(
+                    listOf(DiagnosticFact("Exit history", FactValue.Text("unavailable (API < 30)"))),
+                )
+            }
             val exitInfos =
                 context
                     .getSystemService<ActivityManager>()

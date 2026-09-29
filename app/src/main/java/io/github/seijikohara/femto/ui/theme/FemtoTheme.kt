@@ -1,5 +1,6 @@
 package io.github.seijikohara.femto.ui.theme
 
+import android.os.Build
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -78,6 +79,11 @@ fun FemtoTheme(
             inPreview && darkTheme -> DarkFallback
 
             inPreview -> LightFallback
+
+            // Wallpaper-derived (Monet) colors are Android 12+; below that the
+            // DYNAMIC accent seeds from the BLUE preset instead.
+            Build.VERSION.SDK_INT < Build.VERSION_CODES.S ->
+                rememberDynamicColorScheme(seedColor = AccentColor.BLUE.accentSeedColor()!!, isDark = darkTheme)
 
             darkTheme -> dynamicDarkColorScheme(context)
 
