@@ -168,7 +168,9 @@ oxlint. All Vite+ configuration lives in `vite.config.ts` (build,
   `target`. (The tsgolint `typeAware`/`typeCheck` pair is a coupled
   future decision — see the comment in `vite.config.ts`.)
 - `build.target` in `vite.config.ts` is the sole shipped-syntax
-  floor. Never raise it above the Android 13 factory-WebView floor
+  floor. The Android 9 fork pins it at `chrome67` and ships
+  `legacy-polyfills.js` (inlined into the page and prepended to the MapLibre
+  worker by the Vite plugin in `vite.config.ts`). Upstream: never raise it above the Android 13 factory-WebView floor
   (AGENTS.md#tech-stack). A TypeScript compiler swap therefore
   structurally cannot move the floor.
 - oxfmt follows the root `.editorconfig` (4-space indent — the

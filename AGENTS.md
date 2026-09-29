@@ -32,13 +32,17 @@ applicable rule wins when markets diverge.
   `gradle/libs.versions.toml` + `gradle/wrapper/gradle-wrapper.properties`
   (the JDK toolchain version itself is pinned in
   `gradle/gradle-daemon-jvm.properties`).
-- `minSdk = 33`, `targetSdk = 36` with `compileSdk { release(37) }`
+- Android 9 fork: `minSdk = 28` (every newer API is SDK_INT-guarded with an
+  Android 9 fallback; lint's NewApi check must stay clean) — see
+  `ANDROID9-FORK-PLAN.md`. Upstream: `minSdk = 33`, `targetSdk = 36` with `compileSdk { release(37) }`
   (compile against API 37 as `androidx.core` 1.19+ requires; the
   supported-device floor stays Android 13 / API 33).
 - Web map page (`webmap/`): TypeScript (native TS 7 compiler) +
   Vite+ (the `vp` CLI: build / test / oxlint / oxfmt) + `maplibre-gl`,
   managed with pnpm (pinned via `packageManager`). The
-  Vite `build.target` is `chrome101` — the AOSP WebView the initial
+  Vite `build.target` is `chrome67` in the Android 9 fork (the lowest
+  Chromium the bundle's BigInt literals allow; `webmap/legacy-polyfills.js`
+  fills the newer built-ins). Upstream it is `chrome101` — the AOSP WebView the initial
   Android 13 release shipped (later 13 point releases carry 109, and
   a head unit in the field runs 101); aftermarket AI boxes build on
   that branch with the AOSP `com.android.webview` package, which the

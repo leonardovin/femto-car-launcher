@@ -19,7 +19,8 @@ with automotive overrides on top.
   `MaterialTheme(...)` directly outside `FemtoTheme.kt`.
 - Color: Material You dynamic color
   (`dynamicLightColorScheme` / `dynamicDarkColorScheme`) is the
-  **default** (`AccentColor.DYNAMIC`) — minSdk 33 guarantees
+  **default** (`AccentColor.DYNAMIC`); in the Android 9 fork it seeds from
+  the BLUE preset below API 31 (`FemtoTheme`'s `hasWallpaperColors`). Upstream, minSdk 33 guarantees
   `dynamic*ColorScheme` availability, so no `SDK_INT` branch is
   needed. The user may instead pick a fixed accent in Settings,
   which generates the Material 3 scheme from a preset seed

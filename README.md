@@ -13,6 +13,14 @@
 
 </div>
 
+> [!NOTE]
+> **Android 9 fork** (branch `android-9` of `leonardovin/femto-car-launcher`). This fork runs on
+> Android 9 (API 28) head units — built for the Haval H6 GT (beantechs firmware) — and adds a
+> billing-free Google Maps integration through the Maps app, a Shizuku-powered head-unit setup and
+> climate/seat/drive-mode panel ported from `shizuku-bottom-bar`, and Spotify / Apple Music resume.
+> See [ANDROID9-FORK-PLAN.md](ANDROID9-FORK-PLAN.md) for what changed and
+> `scripts/deploy-to-car.sh` for installing on the car. The rest of this README describes upstream.
+
 Femto Car Launcher replaces the Android home screen with a single
 fixed dashboard designed for automotive viewing distances and touch
 accuracy. The dashboard combines a live map, driving data, weather,

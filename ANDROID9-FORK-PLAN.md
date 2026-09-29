@@ -26,7 +26,7 @@ screen *and* the overlay bottom bar. Constraints of the target unit:
 | 5 | Shizuku integration layer inside the launcher | done |
 | 6 | Port the bottom-bar vehicle controls into the dock | done (needs on-car check) |
 | 7 | Spotify / Apple Music first-class integration | done (needs on-car check) |
-| 8 | Car install path + on-car validation | planned |
+| 8 | Car install path + on-car validation | script done; on-car validation pending |
 
 Verified so far on an API 28 x86_64 emulator (stock WebView 69, GLES 3): dashboard, OSM map with
 3D buildings, GPS chevron, platform reverse geocoding, weather, calendar, battery/Wi-Fi status.
@@ -104,6 +104,17 @@ Media already flows through `MediaSession` for any player; the gaps are start-up
   (reuse `shizuku-bottom-bar/deploy.sh` logic).
 - Check on the car: WebView version (Diagnostics → WebView), ABI, Vulkan flyover fallback, GPS,
   vehicle strip read/write, notification-listener self-grant, HOME role.
+
+## On-car checklist (not verifiable on the emulator)
+
+1. Install: `./gradlew :app:assembleStableDebug && scripts/deploy-to-car.sh <serial>`.
+2. Diagnostics → WebView: note the Chromium major (≥ 67 needed for the live map).
+3. Start Shizuku, then Settings → System → Head unit → allow; "Grant launcher access"
+   should report every step done, and "Make this the home screen" should stick.
+4. Dock → Climate: temperature/fan/A/C changes reach the car without the OEM climate
+   overlay popping up; seat heat on the passenger side is `proven = false` in the bottom bar.
+5. Start a Google Maps route: the guidance card appears top-left with the manoeuvre arrow.
+6. Settings → Panels → Music app → Spotify / Apple Music, stop playback, tap the idle card.
 
 ## Verification per phase
 
